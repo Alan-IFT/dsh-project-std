@@ -961,7 +961,8 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 | 与旧标签的关系 | 这是第一个 semver 标签；此前 44 个日期式标签（含 `2026-10-10-pre.1`～`pre.4`）保留不动（§12.42） |
 | 为什么是 `0.1.0` 不是 `1.0.0` | `engines.dsh` 只在 `0.2.0-rc.2` 上验证过；守卫询问行为在真实会话里还没端到端验证 |
 | 已验证 | Windows 与 Ubuntu 24.04 容器全量测试 0 失败；五道检查退出 0；清单合规 25 条变异、守卫 31 条、残留检查 23 条、发布标签检查 20 条（Linux 上也各跑过）；真实 DSH profile 已锁定到该标签所指提交；真实会话里调用过 `std-01-project-management` 技能（装的是 `pre.4`，正文与 `v0.1.0` 同源） |
-| 未验证 | **重启 DSH 后 `v0.1.0` 的真实会话行为**（Alan 其它项目还在开发，暂不能重启）：两行挂载是否出现、守卫询问是否被 DSH 采纳；模型在完整回合里加载技能的更多路径；`peerDependencies` 的预发布分支在真实 pnpm 解析里的端到端行为 |
+| 已验证（2026-10-10 重启后新会话） | profile 里已装 `dsh-project-std` `0.1.0`（读其 `package.json`）；会话技能目录列出 `std-01`～`std-04`、`std-templates`；真实加载 `std-01-project-management`，正文头注 `source_rev: 35fa15d98d1e`、内容完整（技能挂载这一行已生效）|
+| 未验证 | 插件本体（守卫）那一行挂载是否生效、**守卫询问是否被 DSH 采纳**（本会话审批策略为 `never`，需在 `ask` 的新会话里触发 `git tag` 才能判）；模型在完整回合里加载技能的更多路径；`peerDependencies` 的预发布分支在真实 pnpm 解析里的端到端行为 |
 | 已知限制 | 守卫是命令串预过滤，不是安全边界（盲区见 `tools/std/README`「DSH 接法」）；`std-check` 的自检在 Windows 与 Linux 上各有不适用的探针（跳过不算通过）；三个旧采用项目仍是内嵌 `.std/` 的旧接法，迁移方案由 `std-check migrate` 只读产出，本仓不替它们执行 |
 | 恢复路径 | profile 配置备份在 `~/.dsh/profiles/desktop.backup-before-ai-dev-std-20261010`；重构前最后状态在标签 `archive-pre-ts-refactor`；`git checkout archive-pre-ts-refactor -- <路径>` 可取回任何被移走的文件 |
 
