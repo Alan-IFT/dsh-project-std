@@ -258,7 +258,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
   - [x] 两个平台全量测试与 `std-check` 退出 0：Windows 与 Ubuntu 24.04 容器各一遍，`v0.1.0` 所指提交 `4f93ecb`
   - [x] 发布新标签 `v0.1.0`（semver，§12.42）
   - [x] 在真实 DSH 里从该标签安装：profile 依赖 `#v0.1.0`，锁文件解析到 `4f93ecb…` = 标签所指提交，磁盘上已装包版本 `0.1.0`
-  - [ ] **重启 DSH 后在真实会话里实测**：两行挂载（守卫与技能）、`std-*` 技能加载、守卫询问（Alan 暂时不能重启，其它项目在开发）
+  - [x] **重启 DSH 后在真实会话里实测**（2026-10-10）：两行挂载（守卫询问在会话日志里出现＝守卫那行；技能目录与 `skill` 加载＝技能那行）、`std-*` 技能加载、守卫询问在 `ask` 下被批准、在 `never` 下被拒，均见 §12.43
   - [ ] 设计文档 §12 与实际对齐的最终通读
 
 ### 12.1 阶段 0 的真实口径（TS 版对比时必须按这个来，不是按我设想的来）
@@ -963,11 +963,14 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 | 已验证 | Windows 与 Ubuntu 24.04 容器全量测试 0 失败；五道检查退出 0；清单合规 25 条变异、守卫 31 条、残留检查 23 条、发布标签检查 20 条（Linux 上也各跑过）；真实 DSH profile 已锁定到该标签所指提交；真实会话里调用过 `std-01-project-management` 技能（装的是 `pre.4`，正文与 `v0.1.0` 同源） |
 | 已验证（2026-10-10 重启后新会话） | profile 里已装 `dsh-project-std` `0.1.0`（读其 `package.json`）；会话技能目录列出 `std-01`～`std-04`、`std-templates`；真实加载 `std-01-project-management`，正文头注 `source_rev: 35fa15d98d1e`、内容完整（技能挂载这一行已生效）|
 | 已验证（2026-10-10，守卫询问被 DSH 采纳） | 在 `danger-full-access` + 审批 `never` 的会话里（沙箱不需要提权，审批通道关闭，只有守卫的 `ask` 会产生询问），含 `git tag` 的命令被自动拒绝，同会话里不含受控动作的 `git status`、`git show-ref --tags` 正常执行。本会话自己撞到两次（`git tag --list`），另一会话执行 `git tag tmp-guard-test2` 被拒（该会话自述，转述）。这同时说明插件本体（守卫）那一行挂载已生效 |
-| 未验证 | 批准路径下弹窗文字是否出自守卫：此前 GUI 的“工作区内修改”会话里 `git tag` 弹窗被逐次允许后建成，但该会话混有沙箱提权审批，来源未能区分（记未定）；模型在完整回合里加载技能的更多路径；`peerDependencies` 的预发布分支在真实 pnpm 解析里的端到端行为 |
+| 已验证（2026-10-10，读会话事件日志） | **批准路径下的询问来源可区分**：`~/.dsh/sessions/…/session.v4.jsonl.zstd` 里每次询问是一对 `approval/asked`（带 `reason`）与 `approval/decided`。“工作区内修改”（`ask`）会话 `f196f50c` 里，`reason` 为 `src/guard/policy.ts` 的“打标签属发布动作……”的共 4 次（均 `allowed-once`），与沙箱提权的 `escalate sandbox to …` 并存且可分；“完全权限”（`never`）会话 `9d011915` 里同一 `reason` 的询问 `outcome: rejected`。此前写的“来源未能区分”不成立，已撤回 |
+| 已验证（2026-10-10，读日志） | **模型在完整回合里看到并加载技能**：新会话的系统提示注入了含 `std-*` 的技能目录；本会话（`b0aa1c63`）里模型发起 `skill{name:"std-01-project-management"}`，工具结果非错误、正文完整。这就是 §12.35 起一直挂着的“模型在完整回合里看到并加载技能”。此前写的“加载技能的更多路径”是我加的措辞，设计与其它文档都没有定义，无从验证，已删；子代理会话是否也看到 `std-*` 技能是仍未覆盖的具体场景 |
+| 已验证（2026-10-10，隔离目录，DSH 自带 pnpm 11.7.0） | **`github:Alan-IFT/dsh-project-std#v0.1.0` 的端到端解析**：真实联网安装成功，解析到 `4f93ecb`（与真实 profile 锁定一致），包内 `peerDependencies` 被读到。**`peerDependencies` 范围的行为与 §12.39 的纸面推演不同**：阳性对照（`0.1.0`、`1.0.0`、`0.1.0-rc.1`）报警，说明实验有效；但 pnpm 11.7.0 对 `0.2.0-rc.1`、`0.3.0-rc.1` **不报警**（semver 判不满足），对 `0.2.1-rc.1` 在**不带** `\|\| >=0.2.1-0` 分支的范围下也不报警——即该分支在此 pnpm 上不是必需的（保留无害）。未查明 pnpm 的预发布比较规则，只记实测；真实 profile 设 `autoInstallPeers: false` 且 `dsh-tools` 由宿主提供、不在 `node_modules`，所以这里 peer 不匹配至多是警告，不阻止安装 |
+| 未验证 | 子代理会话是否也看到并能加载 `std-*` 技能；pnpm 对预发布 peer 的比较规则（只测了 11.7.0，升级后需重测）；`auto review` 档位的实际映射（README 称 Full access 沙箱 + `ask`，日志里没有该档会话） |
 | 已知限制 | 守卫是命令串预过滤，不是安全边界（盲区见 `tools/std/README`「DSH 接法」）；`std-check` 的自检在 Windows 与 Linux 上各有不适用的探针（跳过不算通过）；三个旧采用项目仍是内嵌 `.std/` 的旧接法，迁移方案由 `std-check migrate` 只读产出，本仓不替它们执行 |
 | 恢复路径 | profile 配置备份在 `~/.dsh/profiles/desktop.backup-before-ai-dev-std-20261010`；重构前最后状态在标签 `archive-pre-ts-refactor`；`git checkout archive-pre-ts-refactor -- <路径>` 可取回任何被移走的文件 |
 
-**重启后三件事的结果（2026-10-10）**：两行挂载生效、`std-*` 技能能加载、受控动作有询问且被 DSH 采纳，均见上表“已验证”。阶段 5 的复选框仍不勾：“未验证”里还剩弹窗文字归属、技能更多加载路径、`peerDependencies` 预发布分支三项。注意 DSH 界面的审批档位是“仅可查看／工作区内修改／auto review／完全权限”，`tools/std/README` 把审批策略写成 `ask`／`never` 与界面不一致，待另行核对。
+**重启后三件事的结果（2026-10-10）**：两行挂载生效、`std-*` 技能能加载、受控动作有询问且被 DSH 采纳，均见上表“已验证”。此前列的三项未验证（询问来源、技能加载、`peerDependencies` 端到端）经读 DSH 源码说明与会话事件日志、并在隔离目录用 DSH 自带 pnpm 实测，均已有结论，见上表。**DSH 的审批策略只有 `ask`／`never` 两档**（`dsh-user-approval`）；界面的四档是“权限预设”（`dsh-permission-presets`）= 沙箱模式 + 审批策略：仅可查看＝read-only+ask、工作区内修改＝workspace-write+ask、完全权限＝danger-full-access+never（这三档日志已见），auto review＝Full access 沙箱+ask（来自其 README，未实测）。所以界面里没有叫 `ask` 的选项，“工作区内修改”就是 `ask`；`tools/std/README` 的 `ask`／`never` 表述没错，已补上对应关系。剩下的“未验证”是子代理会话、pnpm 预发布比较规则、auto review 档位，都是新增的具体场景，不是原清单里的项。
 
 ### 12.5 阶段 2 的验收口径（动手前先定，2026-10-06）
 

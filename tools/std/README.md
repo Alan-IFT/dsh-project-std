@@ -143,7 +143,7 @@
   [01 §5.6](../../标准/01-项目管理标准.md#gates) 记，不是二选一。
 - **提交前必过 `std-check`**：git `pre-commit` 钩子（见上节形态示意）是必经路径。DSH 一侧**不再另写**调用前钩子——
   没有宿主钩子形态的第二处副本，少一处会过期的权威。插件的 `tools/pre-execute` 监听只做询问与只读，不替代 `std-check`。
-- **权限边界在 DSH 自己的两个旋钮上**：沙箱模式与审批策略（`ask`／`never`）。插件的 `ask` 经 DSH 的审批通道，应答缺席、
+- **权限边界在 DSH 自己的两个旋钮上**：沙箱模式与审批策略（`ask`／`never`）。界面的四档是把两个旋钮捆在一起的“权限预设”：仅可查看＝read-only+`ask`、工作区内修改＝workspace-write+`ask`、完全权限＝danger-full-access+`never`、auto review＝Full access+`ask`（前三档在会话日志里见过，最后一档只见于 DSH 的说明、未实测）；界面里没有叫 `ask` 的选项。守卫的询问在会话日志里是一对 `approval/asked`（`reason` 即 `policy.ts` 的文案）与 `approval/decided`，可据此与沙箱提权（`escalate sandbox to …`）区分。插件的 `ask` 经 DSH 的审批通道，应答缺席、
   被拒、取消一律是拒绝，这一点由 DSH 保证、不由本仓保证。`ctx.tools.restrict()` 是**可见性过滤，不是安全边界**
   （标准仓 `docs/附录-载体实例/DSH载体映射.md` §5），不要拿它当权限用。
 - **入口里模型要看的字段写正文行，不放 YAML 头**：这条是此前在另一宿主上实测出来的（YAML 头整段不进模型上下文）；
