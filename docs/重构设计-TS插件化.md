@@ -962,11 +962,12 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 | 为什么是 `0.1.0` 不是 `1.0.0` | `engines.dsh` 只在 `0.2.0-rc.2` 上验证过；守卫询问行为在真实会话里还没端到端验证 |
 | 已验证 | Windows 与 Ubuntu 24.04 容器全量测试 0 失败；五道检查退出 0；清单合规 25 条变异、守卫 31 条、残留检查 23 条、发布标签检查 20 条（Linux 上也各跑过）；真实 DSH profile 已锁定到该标签所指提交；真实会话里调用过 `std-01-project-management` 技能（装的是 `pre.4`，正文与 `v0.1.0` 同源） |
 | 已验证（2026-10-10 重启后新会话） | profile 里已装 `dsh-project-std` `0.1.0`（读其 `package.json`）；会话技能目录列出 `std-01`～`std-04`、`std-templates`；真实加载 `std-01-project-management`，正文头注 `source_rev: 35fa15d98d1e`、内容完整（技能挂载这一行已生效）|
-| 未验证 | 插件本体（守卫）那一行挂载是否生效、**守卫询问是否被 DSH 采纳**（本会话审批策略为 `never`，需在 `ask` 的新会话里触发 `git tag` 才能判）；模型在完整回合里加载技能的更多路径；`peerDependencies` 的预发布分支在真实 pnpm 解析里的端到端行为 |
+| 已验证（2026-10-10，守卫询问被 DSH 采纳） | 在 `danger-full-access` + 审批 `never` 的会话里（沙箱不需要提权，审批通道关闭，只有守卫的 `ask` 会产生询问），含 `git tag` 的命令被自动拒绝，同会话里不含受控动作的 `git status`、`git show-ref --tags` 正常执行。本会话自己撞到两次（`git tag --list`），另一会话执行 `git tag tmp-guard-test2` 被拒（该会话自述，转述）。这同时说明插件本体（守卫）那一行挂载已生效 |
+| 未验证 | 批准路径下弹窗文字是否出自守卫：此前 GUI 的“工作区内修改”会话里 `git tag` 弹窗被逐次允许后建成，但该会话混有沙箱提权审批，来源未能区分（记未定）；模型在完整回合里加载技能的更多路径；`peerDependencies` 的预发布分支在真实 pnpm 解析里的端到端行为 |
 | 已知限制 | 守卫是命令串预过滤，不是安全边界（盲区见 `tools/std/README`「DSH 接法」）；`std-check` 的自检在 Windows 与 Linux 上各有不适用的探针（跳过不算通过）；三个旧采用项目仍是内嵌 `.std/` 的旧接法，迁移方案由 `std-check migrate` 只读产出，本仓不替它们执行 |
 | 恢复路径 | profile 配置备份在 `~/.dsh/profiles/desktop.backup-before-ai-dev-std-20261010`；重构前最后状态在标签 `archive-pre-ts-refactor`；`git checkout archive-pre-ts-refactor -- <路径>` 可取回任何被移走的文件 |
 
-**待办（等 Alan 能重启 DSH）**：重启后让我在新会话里核对三件事——两行挂载（`dsh --profile desktop --dump-config` 里的 `dsh-project-std` 与 `dsh-project-std-skills`，真实 profile 由桌面版独占，命令行读配置会被拒，所以改用会话内观察）、`std-*` 技能能加载、受控动作有询问。验证后把本节“未验证”里对应项改成已验证并勾掉阶段 5 的那一项。
+**重启后三件事的结果（2026-10-10）**：两行挂载生效、`std-*` 技能能加载、受控动作有询问且被 DSH 采纳，均见上表“已验证”。阶段 5 的复选框仍不勾：“未验证”里还剩弹窗文字归属、技能更多加载路径、`peerDependencies` 预发布分支三项。注意 DSH 界面的审批档位是“仅可查看／工作区内修改／auto review／完全权限”，`tools/std/README` 把审批策略写成 `ask`／`never` 与界面不一致，待另行核对。
 
 ### 12.5 阶段 2 的验收口径（动手前先定，2026-10-06）
 
