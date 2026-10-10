@@ -1,7 +1,7 @@
 // 跨检查器自检与入口自检（对应 tools/std/check_all.py 的 `_contract_examples_selftest`、`_entry_smoke_selftest`、`_shared_fact_selftest`、`_git_env_selftest`、`_hostile_git_config_selftest`；设计 §12.31）。
 //
 // 契约 §3：单个检查器的 selftest 看不见别的检查器，这几条只能在汇总层断言。**每条探针的标题与 Python 版逐字相同**（id 是标题的哈希）。
-// 与 Python 版的有意差异（均在 golden/expected-changes.json 登记）：
+// 与 Python 版的有意差异（均在 test/cases/expected-changes.mjs 登记）：
 //   · 夹具里的入口文件由 `CLAUDE.md` 改为 `AGENTS.md`（入口名是配置不是写死的，探针标题与 id 不变）；
 //   · `_embedded_readonly_selftest`（shared-fact/251040cc）的对象是 `.std/` 内嵌机制，已废弃（§12.28），不迁。
 

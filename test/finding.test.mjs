@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { STRIP as WS_STRIP, RE_S as WS_RE_S } from './cases/whitespace.mjs'
 import { NORMALIZE_KEY, FINDING_ID } from './cases/stdlib-pure.mjs'
-import { PY_WHITESPACE, pyStrip, pyLstrip, normalizeKey, findingId, finding, encodeSurrogateEscape, PASS, FAIL, SKIP, UNDETERMINED } from '../lib/core/finding.js'
+import { PY_WHITESPACE, pyStrip, pyLstrip, pyRstrip, normalizeKey, findingId, finding, encodeSurrogateEscape, PASS, FAIL, SKIP, UNDETERMINED } from '../lib/core/finding.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const unit = (name) => ({ 'whitespace.json': { strip: WS_STRIP, re_s: WS_RE_S }, 'stdlib-pure.json': { normalize_key: NORMALIZE_KEY, finding_id: FINDING_ID } })[name]
@@ -81,6 +81,18 @@ test('pyLstrip 只去左边（Python 的 str.lstrip()）：右边的空白原样
   assert.equal(pyLstrip(''), '')
   assert.equal(pyLstrip('\ufeff x'), '\ufeff x', 'U+FEFF 不是 Python 空白（D6）')
   assert.equal(pyLstrip('x  '), 'x  ')
+})
+
+test('pyRstrip 只去右边（Python 的 str.rstrip()）：左边的空白原样留着；全空白得空串；BOM 不去；10 万个空白仍是线性', () => {
+  assert.equal(pyRstrip(' \u3000x \t\u3000'), ' \u3000x')
+  assert.equal(pyRstrip('   '), '')
+  assert.equal(pyRstrip(''), '')
+  assert.equal(pyRstrip('x \ufeff'), 'x \ufeff', 'U+FEFF 不是 Python 空白（D6）')
+  assert.equal(pyRstrip('  x'), '  x')
+  const t0 = performance.now()
+  assert.equal(pyRstrip('b' + ' '.repeat(100000)), 'b')
+  assert.equal(pyRstrip(' '.repeat(100000) + 'b'), ' '.repeat(100000) + 'b')
+  assert.ok((performance.now() - t0) / 1000 < 1, '线性实现应在毫秒级')
 })
 
 test('pyStrip 与旧正则实现对同一批边界输入逐条相同（线性化没改语义）', () => {

@@ -1,7 +1,7 @@
 // 路径通配（对应 Python 的 `glob.glob(os.path.join(glob.escape(root), pattern))`，只供 layout 的存在性判据 `glob` 用）。
 //
 // **刻意只实现子集**：全仓只有一处用到 glob，且候选写死为三种形态（`tools/check_*.py`、`tools/*/check_*.py`、`tools/*/checks/check_*.py`）。
-// 不引依赖、不做通用 glob。语义对着 Python 的 `glob`（`fnmatch` 翻译）逐条钉在 `golden/unit/glob.json`：
+// 不引依赖、不做通用 glob。语义对着 Python 的 `glob`（`fnmatch` 翻译）逐条钉在 `test/cases/glob.mjs`：
 //   - `*`、`?`、`[...]`、`[!...]` 只在**单个路径段内**生效，不跨 `/`；
 //   - **不匹配以 `.` 开头的名字**，除非模式在该位置也以 `.` 开头；
 //   - `**` 不递归（没带 `recursive=True`），等价于 `*`；

@@ -25,6 +25,8 @@ export interface Registered {
  * 与 JS 的差别：多 U+001C 到 U+001F、U+0085；少 U+FEFF。所以**不能用 `\s` 和 `trim()`**——BOM 开头的文本两版本会得出不同结果。
  */
 export declare const PY_WHITESPACE = "\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
+/** 单个字符是不是 Python 认的空白（str.isspace() 对单字符的判定，设计 §12.6 D6）。strip 族与需要逐字符判空白的调用方共用这一处。 */
+export declare const isPyWs: (ch: string) => boolean;
 /**
  * 等价于 Python 的 `str.strip()`（不带参数）。
  *
@@ -34,6 +36,8 @@ export declare const PY_WHITESPACE = "\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u168
 export declare function pyStrip(s: string): string;
 /** 等价于 Python 的 `str.lstrip()`（不带参数）：只去开头的 Python 空白。 */
 export declare function pyLstrip(s: string): string;
+/** 等价于 Python 的 `str.rstrip()`（不带参数）：只去末尾的 Python 空白，整行全空白得空串。线性，理由同 `pyStrip`。 */
+export declare function pyRstrip(s: string): string;
 /**
  * Finding id 里 key 段的归一化：去首尾空白、内部空白与换行折成 `_`、`|` 换成 `｜`。
  * `|` 要换掉是因为 id 会被人抄进 markdown 表格的「规则」列，裸竖线会把那一行拆成两格。

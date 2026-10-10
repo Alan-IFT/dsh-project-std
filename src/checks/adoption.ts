@@ -6,11 +6,11 @@
 //   · 免审批清单（读 Claude Code 的 `.claude/settings.json`）：`_settings_allow`、`_wildcard_allow` 及它们的 5 个 finding id、自检；该宿主已废弃，DSH 的审批策略是会话级旋钮，没有项目级入库清单可读；
 //   · **版本记录（`governance/STANDARD_VERSION`）**：01 §8 第一条要的是「采用的标准版本可追溯」，载体由项目里一份人维护、机器不核对的文件，换成包管理器的锁文件（profile 的 package.json + pnpm-lock.yaml）加报告自带的工具身份摘要
 //     （`tool-identity`，覆盖 lib/ 与契约），**零人工**。原来的两条 PASS（记了版本值、记了采用日期）与两条未定/FAIL 的分支（缺文件、读不出版本值、没有采用日期）随判据对象一起消失；
-//     解析函数 `parse`／`rawHead` 与两张键名表一并删除。依据见设计 §12.33；黄金样本里 `adoption/8714bd62`、`adoption/8baf1c92` 登记为预期消失，见 golden/expected-changes.json。
+//     解析函数 `parse`／`rawHead` 与两张键名表一并删除。依据见设计 §12.33；黄金样本里 `adoption/8714bd62`、`adoption/8baf1c92` 登记为预期消失，见 test/cases/expected-changes.mjs 的 ADOPTION。
 //   · 因此本检查器现在只剩 compatibility.policy 一个判据。名字仍叫 adoption：id 前缀 `adoption/` 是对外稳定承诺（CONTRACT §4），采用项目的 tailoring 与例外登记可能引用它。
 //
 // 迁移约束：与 Python 版逐 id 相同（黄金样本，上述预期消失的除外）。动笔前对每个 Python 字符串、正则、容器操作都问过「JS 里对应的在非 ASCII、非 BMP、边界值上等价吗」并在 Python 上实测（设计 §12.22）：
-//   `"%s" % value`                    → `pyStr`（映射与嵌套容器按 repr，见 core/cfg 与 golden/unit/pystr.json）
+//   `"%s" % value`                    → `pyStr`（映射与嵌套容器按 repr，见 core/cfg 与 test/cases/pystr.mjs）
 
 import { cfgGet, pyStr, pyTruthy, type Config } from '../core/cfg.js'
 import { headChars, isTailoredOut } from '../core/docs.js'
@@ -72,7 +72,7 @@ const J = (v: unknown): string => JSON.stringify(v)
 export function selftest(): Finding[] {
   const results: Finding[] = []
   // compatibility.policy（01 §5.3）：缺、空串、空映射、空列表、false 判 FAIL；有值（含映射）PASS。
-  // 这条替换 Python 版 `adoption/d5d57eb2`——它把 compatibility.policy 与免审批清单的通配放行合在一条探针里，后一半随废弃宿主一起删，前一半在这里单独守护（golden/expected-changes.json 的 added_probes）。
+  // 这条替换 Python 版 `adoption/d5d57eb2`——它把 compatibility.policy 与免审批清单的通配放行合在一条探针里，后一半随废弃宿主一起删，前一半在这里单独守护（test/cases/expected-changes.mjs 的 ADOPTION.added_probes）。
   const cfgs: Config[] = [{}, { compatibility: {} }, { compatibility: { policy: '' } }, { compatibility: { policy: [] } }, { compatibility: { policy: false } }, { compatibility: { policy: 'x' } }, { compatibility: { policy: { data: '两个版本' } } }, { compatibility: { policy: 0 } }]
   const cs = cfgs.map((c) => compatibility(c).status)
   results.push(probe(NAME, J(cs) === J([FAIL, FAIL, FAIL, FAIL, FAIL, PASS, PASS, PASS]), 'compatibility.policy 缺、空串、空列表、false 判 FAIL；有值（字符串、映射、0）PASS', {

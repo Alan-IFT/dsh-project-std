@@ -25,7 +25,7 @@ import { cfgGet, pyStr, pyTruthy, type Config } from '../core/cfg.js'
 import { addDays, compareDays, todayLocal, toIso, validDate, type CalDate } from '../core/dates.js'
 import { DEFAULT_WORK_ROOT, LIST_CAP, STATUS_CANDIDATES, WORK_ITEM_NAME, docsRootOf, headChars, inFrozen, normRel, rebaseDocs, under, workRoot } from '../core/docs.js'
 import { firstMdTable } from '../core/exceptions.js'
-import { FAIL, PASS, SKIP, UNDETERMINED, PY_WHITESPACE, finding, pyStrip, type Finding } from '../core/finding.js'
+import { FAIL, PASS, SKIP, UNDETERMINED, PY_WHITESPACE, finding, pyRstrip, pyStrip, type Finding } from '../core/finding.js'
 import { fixtureEnv, gitTrack, writeText } from '../core/fixture.js'
 import { exists as pathExists, inside, isDir, isFile, readBytes, readText } from '../core/fs.js'
 import { filterEnv, hardenedEnv } from '../core/git.js'
@@ -259,8 +259,6 @@ const dirnameOf = (r: string): string => { const i = r.lastIndexOf('/'); return 
 
 /** Python 的 `s.lstrip(chars)`：去开头属于 chars 的字符（按码点；chars 全是 BMP 字符，逐个码元去即可）。 */
 const lstripChars = (s: string, chars: string): string => { let i = 0; while (i < s.length && chars.includes(s[i]!)) i++; return s.slice(i) }
-/** Python 的 `str.rstrip()`：整行全空白得空串，否则去尾部空白。逐码元从尾扫，不用 `/WS+$/`（长空白行上平方级回溯，同 `pyStrip`）。 */
-const rstripPy = (s: string): string => { let b = s.length; while (b > 0 && pyStrip(s[b - 1]!) === '') b--; return b === s.length ? s : s.slice(0, b) } // py-semantics-ok: 按已扫出的码元下标切，空白集都在 BMP
 
 export function revisionHits(text: string): Array<[number, string, string]> {
   const out: Array<[number, string, string]> = []
@@ -284,7 +282,7 @@ export function revisionHits(text: string): Array<[number, string, string]> {
     if (REVISION_NOT.some((x) => low.startsWith(x))) continue
     for (const mark of REVISION_MARKERS) {
       if (!low.startsWith(mark)) continue
-      const rest = rstripPy(lstripChars(s.slice(mark.length), '* \t'))
+      const rest = pyRstrip(lstripChars(s.slice(mark.length), '* \t'))
       if (REVISION_LABEL_ONLY.includes(mark) && !bare.startsWith('#') && rest && !':：|'.includes([...rest][0]!)) continue
       out.push([n, headChars(s, 40), mark])
       break

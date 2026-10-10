@@ -2,7 +2,7 @@
 // 原则：歧义即拒绝，不猜。每条拒收信息都带行号并指明写法，**不回显行内容**（安全 2：配置可能是被扫方写的）。
 // 与 Python 版的有意差异见设计 §12.6：D2 递归上限（固定 100 层，同一条消息）、D3 超出安全整数范围抛、D4 \d 只认 ASCII、D6 不用 \s/trim。
 
-import { PY_WHITESPACE, pyStrip } from './finding.js'
+import { PY_WHITESPACE, isPyWs, pyRstrip, pyStrip } from './finding.js'
 import { pyRepr } from './repr.js'
 
 /** 配置无法被无歧义地解析。 */
@@ -59,17 +59,6 @@ function safeInt(s: string, lineno: number): number {
   return n
 }
 
-const PY_WS_CHAR = new RegExp(`^${WS}$`)
-function isPyWs(ch: string): boolean {
-  return PY_WS_CHAR.test(ch)
-}
-/** Python 的 `str.rstrip()`。不用 `/WS+$/`：长空白行上是平方级回溯（同 `pyStrip`），逐码元从尾扫。 */
-function rstripPy(s: string): string {
-  let b = s.length
-  while (b > 0 && isPyWs(s[b - 1]!)) b--
-  return b === s.length ? s : s.slice(0, b) // py-semantics-ok: 按已扫出的码元下标切，空白集都在 BMP
-}
-
 /**
  * 去行尾注释。只在 # 前有空白或位于行首时才算注释，避免吃掉值里的 #。
  * 引号只在值的开头（行首、`:` 或 `- ` 之后）才开启引用：`don't # 注释` 里的撇号是正文，不许把后面的注释吞进值里。
@@ -97,7 +86,7 @@ export function stripComment(line: string): string {
     }
     if (!isPyWs(ch)) last = ch
   }
-  return rstripPy(out.join(''))
+  return pyRstrip(out.join(''))
 }
 
 // 映射行：键（裸词或整体加引号）后跟冒号，冒号后是空白或行尾——YAML 的写法；`https://x` 不是映射。

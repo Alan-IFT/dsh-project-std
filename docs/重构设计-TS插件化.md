@@ -255,7 +255,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
   - [x] 入口候选去 `CLAUDE.md`（§12.38 六）
   - [x] 守卫里 `.std/` 只读判定拆除，守卫变异清单 31/31（§12.38 八）　[x] 残留白名单检查做成第五道钩子（§12.38 九）
   - [x] 删 `tools/dsh-std/`（§12.40）　[x] 冻结历史：只移 `docs/归档`（§12.41；`标准/参考资料` 等约 300 个文件保留）　[x] 公开仓 `ai-dev-std` 已归档（Alan，§12.40 实测不断旧项目升级）
-  - [ ] D-108 的取代（D-137 仍是“提议”，等三个旧项目迁完）　[x] 本仓 `governance/STANDARD_VERSION` 已删（它是已跟踪文件，我原先误记为“已无此文件”；源码里只有 `migrate.ts` 读它、用来给别的采用项目生成迁移方案，本仓自己没有判据读它；本仓是产地，版本就是 `package.json` 的 `version` 加 git 标签）
+  - [ ] D-108 的取代（D-137 仍是“提议”，等三个旧项目迁完；2026-10-10 核对：三个项目仍内嵌 `.std/` 且钩子仍调 Python，一个都没迁，卡点见 `docs/决策日志.md` D-137 末尾；迁移由各项目自己执行，本仓不代做，**所以这一项现在不能勾，也不是本仓能单方推进的**）　[x] 本仓 `governance/STANDARD_VERSION` 已删（它是已跟踪文件，我原先误记为“已无此文件”；源码里只有 `migrate.ts` 读它、用来给别的采用项目生成迁移方案，本仓自己没有判据读它；本仓是产地，版本就是 `package.json` 的 `version` 加 git 标签）
 - [x] 阶段 5：收尾验证（2026-10-10 完成；见 §12.43。`v0.1.0` 之后只有文档提交，代码与标签所指提交一致）
   - [x] 两个平台全量测试与 `std-check` 退出 0：Windows 与 Ubuntu 24.04 容器各一遍，`v0.1.0` 所指提交 `4f93ecb`
   - [x] 发布新标签 `v0.1.0`（semver，§12.42）
@@ -629,7 +629,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 
 **取舍 1：TS 版的"检查器身份"哈希什么？** Python 版哈希 `check_all.py + stdlib.py + CONTRACT.md + checks/check_*.py`（源码文件）。TS 版的"决定行为的内容"是 `lib/**/*.js`（运行的是它），`src/` 只是它的来源，`lib/` 又由 `check-lib-sync` 钉住等于 `src/` 的构建。所以**哈希 `lib/` 下全部 `.js` + `CONTRACT.md`**（行尾归一化规则不变）；`lib/` 与 `src/` 的一致性由第四道闸门管，不由身份管（两者职责不同：身份回答"这次报告是哪一套跑出来的"，不回答"这一套是不是由当前源码构建的"）。**这会让 `tool-identity` 一项必然与黄金样本不同**，已在 §12.1 登记为预期差异（原写 §6，指向有误），对比时排除。
 
-**取舍 2：Python 专有机制不迁，各自写清为什么没有对象。** 以下 stdlib 层探针在 TS 里没有可断言的对象，**不复刻、不假装通过**，在 `golden/expected-changes.json` 的 `vanished_probes` 里各写一条理由：
+**取舍 2：Python 专有机制不迁，各自写清为什么没有对象。** 以下 stdlib 层探针在 TS 里没有可断言的对象，**不复刻、不假装通过**，在 `vanished_probes` 里各写一条理由（当时登记在 `golden/expected-changes.json`，现为 `test/cases/expected-changes.mjs` 的 `CHECK_ALL`；**现状共 9 条**，下表是动工前列出的 7 条，另两条是 `shared-fact/251040cc` 与 `stdlib/c563c6ba`，见下）：
 
 | 探针（id 前缀 `stdlib/`） | 为什么没有对象 |
 |---|---|
@@ -640,6 +640,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 | `efb0793f` 检查器里 `sys.exit(0)` 转未定 | Node 没有 `sys.exit` 抛 `SystemExit`；`process.exit` 会直接结束进程，不是可捕获的异常——**这反而是个要正视的差异**，见取舍 3 |
 | `fe15947f` 字面在项目之外的路径不做 `realpath` 探测 | 这条对象是 `inside()`，TS 版 `fs.ts` 已迁并有同义断言（`fs.test.mjs`） |
 | `b73f92ac` 一次扫描 `discover` 一次、`ls-files` 不重跑 | TS 没有 `discover`（检查器在编译期登记，见取舍 4）；`ls-files` 缓存的断言保留，改成计数 `spawnSync` 调用 |
+| `c563c6ba` `settings.json` 深嵌套记一条未定（后补） | 对象是 `adoption._settings_allow` 读 `.claude/settings.json`，该判据已于 §12.28 随 Claude Code 宿主一起删除；动工前的清单漏了它，登记时补上 |
 
 另 `_embedded_readonly_selftest`（`shared-fact/251040cc`）的对象是 `.std/` 内嵌机制，已于 adoption 迁移时登记废弃（§12.28），不迁。
 
@@ -1084,3 +1085,4 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 | 2026-10-06 | Q3 实测定案，新增 §4.1；Q1 暂定 A | 做阶段 1 前先验证整个设计风险最大的假设（钩子能否找到插件提供的命令）；Alan 未回复 Q1，按推荐先推进并标明可逆 |
 | 2026-10-06 | 阶段 0 完成；新增 §12.1 记真实口径 | 样本口径（钉提交、只比 id/status/where/registered）与「selftest 探针大量调私有函数」这两点是做的时候才量出来的，必须写进设计，否则阶段 2 会按错的假设去迁 |
 | 2026-10-06 | §4 定「`lib/` 提交进 git」，放弃「git 安装时 `prepare` 构建」 | 实测 pnpm 从 git 装包拒绝 `prepare`（`ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`），提交 `lib/` 则成功 |
+| 2026-10-10 | **通读后的收尾整理**：①`pyLstrip`（`freshness.ts` 局部版）、`rstripPy`（`yaml.ts` 与 `drift.ts` 各一份）收敛到 `core/finding.ts` 的 `pyLstrip`／`pyRstrip`／`isPyWs`（三份实现变一份，新增 `pyRstrip` 的行为与线性测试，3 种变异全部抓住）；②`src/` 里 11 处对已删 `golden/` 的引用改指 `test/cases/`（含 `migrate.ts` 里输出给用户的两句提示）；③§12.31 取舍 2 的探针清单补 `stdlib/c563c6ba`（7→9 条，对账 `test/cases/expected-changes.mjs`）；④D-108 的取代：核对三个旧项目，一个都没迁，D-137 保持“提议”，记入 `docs/决策日志.md` | 通读审查报出的遗留项；D-108 的触发条件未满足，不越界改他仓 |

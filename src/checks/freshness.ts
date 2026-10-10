@@ -27,7 +27,7 @@ import {
   ACCEPTANCE_CANDIDATES, HEAD_CHARS, STATUS_CANDIDATES, STATUS_FIELDS, artifactTailored, clean, dateFieldsOf, docsRootOf, findField, headChars, inFrozen,
   isTailoredOut, isWorkItemName, itemStatus, normRel, rebaseDocs, statusKind, under, workRoot,
 } from '../core/docs.js'
-import { FAIL, PASS, SKIP, UNDETERMINED, PY_WHITESPACE, finding, pyStrip, type Finding } from '../core/finding.js'
+import { FAIL, PASS, SKIP, UNDETERMINED, PY_WHITESPACE, finding, pyLstrip, pyStrip, type Finding } from '../core/finding.js'
 import { fixtureEnv, gitTrack, writeText } from '../core/fixture.js'
 import { __testHooks, exists as pathExists, isDir, isFile, readText } from '../core/fs.js'
 import { hardenedEnv, shallowProblem } from '../core/git.js'
@@ -69,8 +69,6 @@ const TRANSITION_FIELDS = ['last_transition_at', 'state_changed_at', '最后状�
 const TRANSITION_HEADINGS = ['状态转换记录', '状态转换', '转换记录', 'transition'] as const
 
 const WS = `[${PY_WHITESPACE}]`
-/** Python 的 `str.lstrip()`（无参）：去开头的 Python 空白。 */
-const pyLstrip = (s: string): string => s.replace(new RegExp(`^${WS}+`), '')
 
 /** 取标题含关键词的那一节正文（到下一个标题为止）。找不到返回 null。 */
 export function sectionBody(text: string, keywords: readonly unknown[]): string | null {
