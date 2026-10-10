@@ -26,6 +26,7 @@ const ALLOW = [
   [/^docs\/(决策日志|失败Case清单)\.md$/, '历史叙述：决策与失败案例按当时的事实记录，D-135 起的废弃是其中的内容'],
   [/^docs\/重构设计-TS插件化\.md$/, '本次重构的设计与进度账：讲怎么清除，天然点名旧物'],
   [/^docs\/附录-载体实例\/(DSH载体映射|会话交接|仓库工作须知)\.md$/, '载体映射与交接：叙述 D-135 的取舍、已删除的东西、仍待处理的项'],
+  [/^docs\/附录-载体实例\/迁移提示词\.md$/, '(a) 给三个旧采用项目的迁移提示词：它们的 .std/、STANDARD_VERSION 正是要被迁走的旧物，不点名就没法下指令；迁完后随会话交接一并清理'],
   [/^(src\/migrate\.ts|test\/migrate\.test\.mjs|test\/mutations\/migrate\.json)$/, '(a) `std-check migrate` 的功能本身：识别并指导删除采用项目里的旧物，必须点名它们'],
   [/^(src\/checks\/(cross_repo|adoption|drift|freshness)\.ts|src\/core\/(tracked|shell|docs|config)\.ts|src\/(check_all|selftest|selftest_shared|selftest_git|skills)\.ts)$/, '(c) 源码注释：记录“为什么不再有这个判据／这个机制”（设计 §12.28、§12.30、§12.33、§12.38），不是行为'],
   [/^test\/(cases|mutations)\//, '(c) 期望数据与变异清单里的反例和历史字面量（例如“CLAUDE.md 不再是入口候选”）'],

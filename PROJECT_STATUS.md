@@ -4,7 +4,7 @@ status_revision：`36`
 corpus_version：`v0.7-theory-draft`  ← **全仓唯一权威版本号**。各文档不再各自声明版本（2026-09-03 去掉 26 处副本，取值曾在 v0.5/v0.6/v0.7 之间漂移）。冻结快照 `docs/归档/历史/`、研究材料与 `.staging/` 保留各自的版本号，那是它们被冻结时的值。  
 updated_at：2026-10-06
 last_status_change：2026-10-04（受支持宿主收为 DeepSeek Harness 一家，见 D-135；逐轮经过只看 git log 与审计记录）
-当前里程碑：**本仓只支持 DeepSeek Harness（DSH），不再支持 Claude Code（[D-135](docs/决策日志.md#decision-index)）；执行层是本仓根目录的 DSH 插件 `dsh-project-std`（守卫在 `src/guard/`，检查器 `std-check` 在 `src/checks/`，设计与进度账见[重构设计](docs/重构设计-TS插件化.md)）；它在隔离 profile 里从 git 地址实机装入并调用过，**模型在完整会话回合里实际加载技能的部分未验证**。**研究架构保持现有组织；候选标准增加长期管理、架构演进、Agent 治理与运行维护内容，具体交付和检查见[本轮完善记录](docs/审计记录/本轮完善记录.md)。实际项目效果仍待验证；规则效力只查生效登记表。
+当前里程碑：**本仓只支持 DeepSeek Harness（DSH），不再支持 Claude Code（[D-135](docs/决策日志.md#decision-index)）；执行层是本仓根目录的 DSH 插件 `dsh-project-std`（守卫在 `src/guard/`，检查器 `std-check` 在 `src/checks/`，设计与进度账见[重构设计](docs/重构设计-TS插件化.md)）；它已在隔离 profile 与重启后的真实 DSH 会话里验证（装入、技能加载、守卫询问被 DSH 采纳；依据与剩余未验证项见[重构设计 §12.43](docs/重构设计-TS插件化.md)）。**研究架构保持现有组织；候选标准增加长期管理、架构演进、Agent 治理与运行维护内容，具体交付和检查见[本轮完善记录](docs/审计记录/本轮完善记录.md)。实际项目效果仍待验证；规则效力只查生效登记表。
 状态：进行中  
 状态负责人：用户与 AI 共同维护
 

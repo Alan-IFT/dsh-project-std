@@ -36,13 +36,13 @@ test('白名单之外出现任一废弃字样 → 退出 1，并指出文件、�
 
 test('同样的字样放进白名单路径 → 退出 0：冻结区、历史叙述、迁移功能、设计账、反例数据', () => {
   const w = 'CLAUDE.md'
-  for (const rel of ['docs/审计记录/001.md', 'docs/归档/x.md', 'docs/参考资料/y.md', 'docs/参考资料-Claude/z.md', '标准/参考资料/M.md', 'docs/决策日志.md', 'docs/失败Case清单.md', 'docs/重构设计-TS插件化.md', 'src/migrate.ts', 'test/migrate.test.mjs', 'test/mutations/migrate.json', 'test/cases/a.mjs', 'test/mutations/docs.json', 'src/guard/policy.ts', 'lib/x.js', 'skills/s.md', 'tools/std/README.md']) {
+  for (const rel of ['docs/审计记录/001.md', 'docs/归档/x.md', 'docs/参考资料/y.md', 'docs/参考资料-Claude/z.md', '标准/参考资料/M.md', 'docs/决策日志.md', 'docs/失败Case清单.md', 'docs/重构设计-TS插件化.md', 'src/migrate.ts', 'test/migrate.test.mjs', 'test/mutations/migrate.json', 'test/cases/a.mjs', 'test/mutations/docs.json', 'src/guard/policy.ts', 'lib/x.js', 'skills/s.md', 'tools/std/README.md', 'docs/附录-载体实例/迁移提示词.md']) {
     const r = run({ [rel]: `含 ${w} 的一行\n` }); assert.equal(r.rc, 0, rel + ' 应在白名单内：' + r.out)
   }
 })
 
 test('白名单的粒度：同一目录下“相近但不同”的路径不放行（防白名单被写成前缀通配）', () => {
-  for (const rel of ['docs/决策日志副本.md', 'docs/重构设计.md', 'docs/附录-载体实例/README.md', 'src/checks/links.ts', 'src/core/fs.ts', 'test/other.test.mjs', 'scripts/other.mjs', 'templates/AGENTS.md', 'tools/std/NOTES.md', 'tools/other/README.md', 'docs/审计记录x/a.md', '标准/01-另一章.md', 'tools/dsh-std/README.md', 'tools/dsh-std/lib/policy.js']) {
+  for (const rel of ['docs/决策日志副本.md', 'docs/重构设计.md', 'docs/附录-载体实例/README.md', 'docs/附录-载体实例/迁移提示词副本.md', 'docs/附录-载体实例/子目录/迁移提示词.md', 'src/checks/links.ts', 'src/core/fs.ts', 'test/other.test.mjs', 'scripts/other.mjs', 'templates/AGENTS.md', 'tools/std/NOTES.md', 'tools/other/README.md', 'docs/审计记录x/a.md', '标准/01-另一章.md', 'tools/dsh-std/README.md', 'tools/dsh-std/lib/policy.js']) {
     const r = run({ [rel]: '含 .std/ 的一行\n' }); assert.equal(r.rc, 1, rel + ' 不该在白名单内'); assert.match(r.out, new RegExp(rel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), rel)
   }
 })
