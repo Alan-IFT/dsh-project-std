@@ -26,7 +26,7 @@ updated_at: 2026-10-10
 
 **目标**
 1. 本仓库（`https://github.com/Alan-IFT/dsh-project-std`，原名 `ai_dev_system`）本身就是一个合规的 DSH 插件包，用户经 DSH 自己的安装通道（Plugins 页 / `plugin_manager`，填 git 地址）安装。
-2. 守卫、12 个检查器、`check_all`、`stdlib` 全部用 TypeScript，运行时只有 Node（DSH 自带），**不再依赖 Python**。
+2. 守卫、全部检查器（设计时的个数估计有误，以 `src/checks/index.ts` 的注册表为准，见 §12.31）、`check_all`、`stdlib` 全部用 TypeScript，运行时只有 Node（DSH 自带），**不再依赖 Python**。
 3. 采用项目**不再内嵌 `.std/`**：项目只放自己的文档与 `governance/`，用一行版本声明指向标准版本；标准正文、模板、检查器随插件提供。
 4. 废弃技术栈（Claude Code、`.claude/settings.json`、`CLAUDE.md` 兼容候选名、`.std/` 内嵌机制）从代码、文档、配置中**清除**，不留兼容层。
 5. 重构过程可中断、可续做、可回滚（§9、§10）。
@@ -39,6 +39,8 @@ updated_at: 2026-10-10
 
 ## 3. 目标结构
 
+> **本树是动工前的设计，最终形态以仓库实物为准**：标准正文不在 `standard/`，而以 `skills/`（`std-01`～`std-04`、`std-templates`）技能形态随包分发（§12.33）；`golden/` 已在 §12.37 删除，只能在标签 `archive-pre-ts-refactor` 里看到；因此下文「保护 `standard/`」从未落地。
+
 ```text
 dsh-project-std/                     ← 仓库根 = 插件包根
 ├─ package.json                     DSH 清单：dsh.manifestVersion=1、dsh.bundle.patch、engines.dsh
@@ -46,7 +48,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 ├─ tsconfig.json
 ├─ src/                             TypeScript 源码（唯一手写源）
 │  ├─ guard/                        守卫（现 tools/dsh-std 迁入）
-│  ├─ checks/                       12 个检查器
+│  ├─ checks/                       检查器（个数以 src/checks/index.ts 为准）
 │  ├─ core/                         stdlib 的 TS 版（读文件、三态、finding、YAML 子集解析等）
 │  └─ cli.ts                        命令行入口：`std-check`（钩子与 CI 调用）
 ├─ lib/                             **构建产物，提交进 git**（原因见 §4）
@@ -102,7 +104,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 **据此定的钩子写法**（阶段 1 落地并验证）：钩子用 `$DSH_PROFILE_DIR`、`$DSH_HOME` 拼出 node 与 `cli.js` 的路径后直接 `node cli.js`，**不依赖 `.bin` 的 shim，也不依赖 PATH 上有 node**。这和现在 `pick-python.sh` 解决的是同一类问题（「钩子运行时找不到解释器」），但**只剩一条确定路径**，不再需要「依次试几个候选、取第一个跑得通」。
 **未验证**：钩子在 **DSH 之外**（例如在系统终端手敲 `git commit`、CI）运行时，`DSH_HOME` 不存在——此时钩子要回退到什么？阶段 1 要定：我的倾向是回退到 `PATH` 上的 `node` 与项目里记录的 `STD_CLI` 环境变量，找不到则**失败关闭**并说清缺什么。
 
-**安装验证（硬性，阶段 1 的验收）**：在真实 DSH 里，用 Plugins 页（或 `plugin_manager`）填 `git+https://github.com/Alan-IFT/ai_dev_system.git#<tag>` 安装，重启后**实测守卫生效**（写 `standard/` 被拒），不能只靠本地 `link:`。
+**安装验证（硬性，阶段 1 的验收）**：在真实 DSH 里，用 Plugins 页（或 `plugin_manager`）填 `git+https://github.com/Alan-IFT/ai_dev_system.git#<tag>` 安装（改名前的地址；现为 `Alan-IFT/dsh-project-std`，§12.39），重启后**实测守卫生效**（写 `standard/` 被拒），不能只靠本地 `link:`。
 
 ## 5. 技术选型
 
@@ -149,7 +151,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 | 阶段 | 内容 | 退出条件（全部满足） | 可否单独停下 |
 |---|---|---|---|
 | **0 基线** | 写本设计文档并提交；生成 Python 版黄金样本；量化废弃残留 | 设计文档已提交推送；`golden/` 含 ≥5 个样本且 Python 版重跑结果与之逐字节相同；残留清单落盘 | 是——只增文件，不改现状 |
-| **1 骨架与守卫** | TS 工程骨架（`package.json` 合规、`tsconfig`、构建、`lib/` 同步校验）；守卫迁为 TS；真实 DSH 里经 git 地址安装验证 | `tsc` 通过；守卫测试 ≥ 现有 471 条且全过（Windows 与 Ubuntu 容器）；**真实 DSH Plugins 页用 git 地址装入后，写 `standard/` 被拒且已落盘文件为零**；`lib/` 与 `src/` 一致校验已接进钩子 | 是——此时 Python 检查器仍是现役 |
+| **1 骨架与守卫** | TS 工程骨架（`package.json` 合规、`tsconfig`、构建、`lib/` 同步校验）；守卫迁为 TS；真实 DSH 里经 git 地址安装验证 | `tsc` 通过；守卫测试 ≥ 现有 471 条（当时的数字；§12.38 八拆除 `.std/` 判定后以现跑为准，§12.40 记 422）且全过（Windows 与 Ubuntu 容器）；**真实 DSH Plugins 页用 git 地址装入后，写 `standard/` 被拒且已落盘文件为零**；`lib/` 与 `src/` 一致校验已接进钩子 | 是——此时 Python 检查器仍是现役 |
 | **2 检查器迁移** | `core` + 12 检查器 + `check_all` + selftest 夹具 | 每个检查器：TS 与黄金样本逐 id 零差异；`--selftest` 的变异验证全迁且通过；TS `check_all` 在本仓退出码与 Python 版一致 | 每迁完一个检查器可停 |
 | **3 采用项目迁移材料** | 写迁移步骤文档与脚本（**不执行**） | 步骤在一个**本仓内的合成夹具项目**上演练通过；三项目逐个写出「改什么、验什么、怎么回退」 | 是 |
 | **4 清理** | 删 Python 版与 `golden/`；清 Claude Code 残留；冻结历史处理 | 废弃技术栈字样（口径与白名单见 `scripts/check-residue.mjs`，Alan 2026-10-10 认可）**只出现在白名单里**，白名单外零命中，由提交钩子的第五道机械核对（原写“现行文件零命中”字面不可达，见 §12.38 七）；**冻结历史先打 `archive-pre-ts-refactor` tag，再从 `main` 移除或留作仅历史**——此条需 Alan 确认（§11 Q2） | 否——删了就不能回退，必须在 tag 之后 |
@@ -195,7 +197,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 | # | 问题 | 我的倾向 | 状态 |
 |---|---|---|---|
 | Q1 | **已定 A，2026-10-10 部分改定**（Alan 2026-10-06 确认 `package.json.version` 用 `0.<序号>.0`；**2026-10-10 又改：发布标签不再沿用日期风格，改为 `v` + 该 version**，见 §12.42）。`package.json.version` 用什么形式：`0.<序号>.0`（符合 semver，与日期 tag 另表对应），还是把日期当版本（`2026.10.6` 这类，不合 semver 规范但可读） | `0.<序号>.0`，对应表放发布记录 | 未决，阶段 1 前定 |
-| Q2 | 冻结历史（`docs/参考资料*`、`审计记录`、`归档`、`标准/参考资料`，约 172 个文件、1,190 处 Claude 字样）：留在 `main`、还是打 tag 后从 `main` 移除 | 打 tag 后从 `main` 移除（保留可查，`main` 不再带废弃栈）；**这会推翻 D-135 当时的「冻结历史不改」** | **未决，阶段 4 前必须定** |
+| Q2 | 冻结历史（`docs/参考资料*`、`审计记录`、`归档`、`标准/参考资料`，约 172 个文件、1,190 处 Claude 字样）：留在 `main`、还是打 tag 后从 `main` 移除 | 打 tag 后从 `main` 移除（保留可查，`main` 不再带废弃栈）；**这会推翻 D-135 当时的「冻结历史不改」** | **已定（§12.41）：只移 `docs/归档`（1102 个文件）；`标准/参考资料` 等约 300 个文件保留，是否继续瘦身待定**（上栏的「约 172 个文件」是当时估计）|
 | Q3 | 采用项目的钩子怎么找到插件提供的 `std-check` | **已实测，答案见 §4.1**：`bin` 字段 + `.bin` 可用，但钩子里必须自己带 node | **已定（阶段 1，2026-10-06）** |
 
 **风险**
@@ -220,15 +222,15 @@ dsh-project-std/                     ← 仓库根 = 插件包根
   - [x] 废弃残留清单已落盘——`golden/residue-baseline.txt`（口径与基线读数见 §12.1；阶段 4 随 `golden/` 删除而移到 `docs/归档/残留基线-阶段0.txt`）
 - [x] 阶段 1：骨架与守卫（2026-10-06 完成，下面分项全勾）
   - [x] 1-a Q3 实测定案、`tsc` 可用性（`ac0e2b5`）
-  - [x] 1-b TS 工程骨架：`package.json`（`dsh.manifestVersion`、`bundle.patch`、`engines`）、`tsconfig.json`、`cordis.patch.yml`（`name` 与包名同为 `ai-dev-std`）、`scripts/check-lib-sync.mjs`；`tsc` 7.0.2 构建通过
+  - [x] 1-b TS 工程骨架：`package.json`（`dsh.manifestVersion`、`bundle.patch`、`engines`）、`tsconfig.json`、`cordis.patch.yml`（`name` 与包名同为 `ai-dev-std`；现名 `dsh-project-std`，§12.39）、`scripts/check-lib-sync.mjs`；`tsc` 7.0.2 构建通过
   - [x] 1-c 守卫迁 TS：`src/guard/{policy,index}.ts` + 根入口 `src/index.ts`；**行为不变**——现役 JS 守卫基线 471 条（470 过、0 败、1 跳）与 TS 编译产物上的结果逐项相同；变异验证（把「.std 只读 deny」改 allow）后 16 条变红、还原后回到 0 败
-  - [x] 1-d `lib/` 与 `src/` 一致性校验：脚本四种变异都符合预期（改 src 不构建→1、手改 lib→1、lib 多出过期文件→1、缺 tsc→2 即「没跑成不当通过」）；已接进 `.githooks/pre-commit` 作第四道，三种行为实测（全绿 0、不一致拦下、找不到 node 失败关闭 127）
+  - [x] 1-d `lib/` 与 `src/` 一致性校验：脚本四种变异都符合预期（改 src 不构建→1、手改 lib→1、lib 多出过期文件→1、缺 tsc→2 即「没跑成不当通过」）；已接进 `.githooks/pre-commit`（当时作第四道，现为第三道，§12.38），三种行为实测（全绿 0、不一致拦下、找不到 node 失败关闭 127）
   - [x] 1-e **`lib/` 提交进 git**——`755e7ad`，经新的第四道钩子；提交前核暂存清单时发现一份已在磁盘删除的 `tsconfig.test.json` 还在索引里，已移除，没进历史
   - [x] 1-f 守卫测试在 **Ubuntu 24.04 容器**里全过：用 Node **22.19.0**（`engines` 下限）与 **24.21.0** 各跑一遍——`pnpm install --frozen-lockfile`、`tsc` 构建、`check-lib-sync` 退出 0、构建后 `git status` 为空（lib 与提交一致）、`node --test "test/*.test.mjs"` 471 条、0 失败、22 条跳过（只在 Windows 成立的路径语义，跳过不算通过）
   - [x] 1-g **真实 DSH 里从 git 地址经 DSH 自己的安装通道装入，守卫生效**（2026-10-06，提交 `fac60ca`）。做法与范围见 §12.3；**未覆盖的两项**（`ask` 的真实批准流程、桌面版 Plugins 页的点击安装）在 §12.3 逐条写明，不算已验证
   - [x] 1-h 新路径保护：做成插件配置 `protect`（Alan 2026-10-06 选 B），默认空；37 条单测；6 种变异验证（首轮 2 种没被抓住，补用例后全部抓住）；真实 DSH 里端到端验证配置传递，含对照实验。做法与取舍见 §12.4。**`standard/` 的保护未做**——该目录阶段 2 之后才存在，不预先写规则
 - [x] 阶段 2：检查器迁移（2026-10-08 完成：十个检查器 + 汇总层，下面分项全勾；Python 版仍在，阶段 4 才删）
-  - [ ] core（拆成多文件，下面逐个勾）：
+  - [x] core（拆成多文件，下面逐个勾；2026-10-08 全部完成）：
     - [x] `core/finding.ts`（三态、id、`normalizeKey`、Python 空白集合 `PY_WHITESPACE`、`pyStrip`、`encodeSurrogateEscape`）
     - [x] `core/yaml.ts`（严格 YAML 子集解析器）、`core/dates.ts`（`parseDate`，D1）
     - [x] `core/fs.ts`（受限读取：`inside`/`guard`/`readBytes`/`readText`/`countLines`）
@@ -245,7 +247,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
   - [x] （core 总项：`tracked.ts` 随汇总层迁完，2026-10-08）　[x] entry_budget（2026-10-06，§12.16）　[x] layout（2026-10-06，§12.18）　[x] links（2026-10-06，§12.20）　[x] freshness（2026-10-06，§12.23）　[x] drift（2026-10-07，§12.24）　[x] derived（2026-10-07，§12.26）　[x] evidence（2026-10-07，§12.27）　[x] adoption（2026-10-07，§12.28）　[x] single_authority（2026-10-07，§12.29）　[x] cross_repo（2026-10-08，§12.30）
   - [x] derived　[x] evidence　[x] adoption　[x] single_authority　[x] cross_repo　[x] check_all（2026-10-08，§12.32）
 - [x] 阶段 3：采用项目迁移材料（2026-10-09：标准技能分发 §12.33、`adoption` 改造 §12.33 五、`std-check migrate` §12.34；三个真实项目的方案已只读生成；**迁移本身不执行**，等阶段 5 发布新 tag 并装入后由 Alan 决定）
-- [ ] 阶段 4：清理（部分完成，见下；剩余项等 Alan 决定，§12.38 末）
+- [ ] 阶段 4：清理（除 D-108 的取代外均已完成，剩余项见下一条 D-108；§12.38 末的旧待办已在 §12.40、§12.41 做完）
   - [x] 黄金数据改为 TS 用例表，删 `golden/` 与 Python 生成／比对脚本（§12.37）
   - [x] 三个 Python 元治理脚本迁 Node 或并入 std-check；提交钩子全 Node（§12.38 一、二）
   - [x] 删 `tools/std/` 的 Python 检查器、`stdlib.py`、`pick-python.sh`（§12.38 三）
@@ -262,6 +264,8 @@ dsh-project-std/                     ← 仓库根 = 插件包根
   - [ ] 设计文档 §12 与实际对齐的最终通读
 
 ### 12.1 阶段 0 的真实口径（TS 版对比时必须按这个来，不是按我设想的来）
+
+> `golden/` 已在 §12.37 删除；本节与 §12.5 提到的黄金样本只能在标签 `archive-pre-ts-refactor` 里看到。下面是阶段 0 当时的口径。
 
 **样本钉在提交上，不钉在目录上**：`make_golden.py` 用临时 `git worktree` 检出记录的提交再扫，所以不受被扫仓当前工作区影响。实测同一提交用「真实目录」与「worktree」两种扫法，PMC 的 157 条 finding 的 id 与 status 完全一致。
 
@@ -300,7 +304,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 1. **变异验证抓出测试盲区**：6 种变异里 M4（放过含 `..` 与 `.` 的项）、M5（放过绝对路径）两种**没被抓住**。查实不是防御冗余——放过 `./x` 会让项目内的 `x` 被误保护、放过 `/etc` 会让项目内的 `etc/hosts` 被误保护，只是原用例没有构造出会触发差异的输入。补了 9 条能区分的用例（以及 4 条区分「非数组被整体忽略」与「字符串被逐字符展开」的用例）后，M3/M4/M5/M7 全部被抓住。**教训：用例通过不等于用例有区分力，变异验证才是**。
 2. **我在 README 里写了一个编造的 YAML 语法**：先写了 `- override:` 这个键，**DSH 并没有它**。发现的经过：为了验证配置传递，去读 DSH 文档与用户真实 profile 的 `cordis.patch.yml`，真实写法是**顶层条目带 `id`/`name`/`config`**，并且 DSH 明确「用户 patch 整块替换匹配到的 config、不深合并」。已更正 README，并**真的在隔离 profile 里照更正后的写法验证**：`--dump-config` 合并后 `protect` 为那六项；真实 `tools/pre-execute` 管线里写 `src/guard/x.ts`、`package.json` 被要求审批（探针没有 agent，所以是「requires approval」，与 §12.3 第 1 项同一限制），写 `docs/a.md`、`test/a.mjs` 放行；**对照**：同 profile 把 `protect` 改回 `[]`，四个写入全部放行并落盘。
 
-**仍未覆盖**：`ask` 的真实批准流程（同 §12.3）；用户自己真实 profile 里的 `dsh-std` 条目仍是旧的 `link:` 到 `tools/dsh-std`，**没有改**——切换到新包、写上 `protect` 是阶段 4（清理旧位置）一起做的事，现在改会让本机的守卫在 Python 检查器退役前出现两份。
+**仍未覆盖**：`ask` 的真实批准流程（同 §12.3）；用户自己真实 profile 里的 `dsh-std` 条目仍是旧的 `link:` 到 `tools/dsh-std`，**当时没有改**（已于 §12.40 卸载并换成新包）——切换到新包、写上 `protect` 是阶段 4（清理旧位置）一起做的事，现在改会让本机的守卫在 Python 检查器退役前出现两份。
 
 ### 12.3 1-g 的验证做法、证据与未覆盖的部分
 
@@ -333,7 +337,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 - **TS 7.0 的 `tsc` 能直接用**：`pnpm view` 显示 `latest = 7.0.2`，本机实测构建与运行都成功；DSH 生态里 `dsh-context` 同样用 `^7.0.2`。
 - **DSH 官方有 `ToolExecution`、`PreToolDecision` 类型**（`@deepseek-ai/dsh-tools`），守卫的适配层直接用，不自己编接口。本仓 devDeps 拉到的 `cordis 4.0.4`、`dsh-tools 0.2.0-rc.2` 与 DSH 内置版本**逐一核对相同**。
 - **JS 的字面量推断与 TS 不同**：JS 版里 `{ kind: 'allow' }` 在 TS 里被推断成 `{ kind: string }`，赋给 `PreToolDecision` 报错。给 `downstream`、`verdict`、`inner`、`mine` 显式标类型后解决；行为不变。
-- **插件名要等于包名**：`cordis.patch.yml` 的 `name` 与 `index.ts` 的 `name` 导出都改成 `ai-dev-std`（本机已装的 `dsh-user-preferences` 就是这个惯例）。原来的 `dsh-std` 只是目录名。
+- **插件名要等于包名**：`cordis.patch.yml` 的 `name` 与 `index.ts` 的 `name` 导出都改成 `ai-dev-std`（现名 `dsh-project-std`，§12.39；本机已装的 `dsh-user-preferences` 就是这个惯例）。原来的 `dsh-std` 只是目录名。
 - **`bin` 与 PATH**：见 §4.1。
 
 ### 12.7 阶段 2 迁移中量出来的事（`core` 的 finding/yaml/dates 完成时）
@@ -438,7 +442,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 - **做了什么**：新增 `scripts/check-py-semantics.mjs`，扫 `src/core/`（**不扫 `src/guard/`**：守卫是 JS 原生实现，不是 Python 的移植，不需要与 Python 对齐），禁止五类写法：`.trim()` 一族（D6）、正则 `\s \S`（D6）、`\w \W \b`（D5）、`\d \D`（D4）、正则 `m` 标志（D13）。注释里的不算；确有理由的在行尾写 `// py-semantics-ok: 理由`（**理由必填**，不写理由本身就是违规）。`test/py-semantics.test.mjs` 对它做变异：18 种违规写法必须全被抓住、12 种合规写法必须全被放行、真实 `src/core` 必须 0 违规、`src/core` 不存在时必须退出码 2（不是静默通过）。
 - **首次运行就在现有源码上抓到 5 处**：`config.ts` 2 处 `\s`（`numKinds` 的两个正则，输入已通过 YAML 解析，实际风险小，但仍按约束改成显式空白类）、`git.ts` 2 处 `.trim()` 与 1 处 `\d`。另外 `config.ts:241` 的 `.trim()` 是个**真实的小风险**（预算键名带 U+FEFF 时对不上，脚本之前我手工审计时发现并修了）。全部改成 `pyStrip` / `[0-9]` / 显式空白类，行为不变，全部测试仍过。
 - **一个被 `\s` 规则放宽的细节**：我最初为了放过 `[\s\S]`（「任意字符」，不是空白语义）写了个带前后断言的复杂正则，**测试立刻显示它放过了 `[\s|>]`（字符类里的 `\s`）**；去掉复杂断言、改成无条件抓 `\s`，`[\s\S]` 的放行靠先把这个字面子串从待查文本里删掉。**简单的规则加例外，比复杂的规则更不容易漏。**
-- **没接进提交闸门——这是个待你决定的事**：我准备把它作为 `.githooks/pre-commit` 的第五道，**这一步的编辑被拒绝了**。我没有绕过（钩子是受控动作，需要你同意）。现状：脚本 + 测试都在，`pnpm test` 会跑到 `py-semantics.test.mjs` 里的「真实 src/core 当前无违规」那条，所以**测试套件已经间接守着它**；只是提交时不会单独拦。接不接、是否另有想法，见本轮汇报。
+- **（已解决：§12.38 二把它接成了第四道）当时没接进提交闸门——这是个待你决定的事**：我准备把它作为 `.githooks/pre-commit` 的第五道，**这一步的编辑被拒绝了**。我没有绕过（钩子是受控动作，需要你同意）。现状：脚本 + 测试都在，`pnpm test` 会跑到 `py-semantics.test.mjs` 里的「真实 src/core 当前无违规」那条，所以**测试套件已经间接守着它**；只是提交时不会单独拦。接不接、是否另有想法，见本轮汇报。
 
 ### 12.16 第一个检查器 `entry_budget`：验收脚手架、`isFile` 统一、`realpath` 对断链的缺口
 
@@ -478,7 +482,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 - **D17（有意差异）**：不带 `.std/` 自排除。**对黄金样本零影响**（实测：三个采用项目上，`links`、`single_authority`、`drift` 三个检查器「排除」与「不排除」的 finding 集合完全相同）；新架构里采用项目本来就不再内嵌 `.std/`（§8），这个机制失去了对象。
 - **证据**：对 Python 样本（真实夹具 git 仓：普通文件、中文名、空格、含 `[ ] # ,` 的名字、`.MD` 大小写后缀、嵌套目录、以点开头、工作项目录与其子目录、`.gitignore` 忽略的、未跟踪的、已删除但仍在索引里的、非仓、空仓；几十种模式与目录写法；条数以样本为准，本节不抄）逐条一致；变异 44 条，**Windows 42 抓住 + 2 如实标注，Ubuntu 44 全抓住，0 漏**；全量测试 Ubuntu 0 败。
 - **一个安全对照实验**：`git ls-files` **会**执行被扫仓配置里的 `core.fsmonitor`（对照组：不经加固直接跑，标记文件出现；`git status` 同）。所以 `trackedFiles` 必须经 `hardenedEnv`——变异 L5（不加固）被恶意仓测试抓住，测试里先跑对照组证明这个攻击在本机真实可行，否则「标记文件没出现」什么也证明不了。
-- **三个这一块暴露的、我本来不知道的事**：①**Windows 上 `col:on.md` 不报错**：NTFS 把冒号当备用数据流，建出的是名为 `col` 的文件——造夹具时必须核对「同名文件真的在目录里」才算造成；②**`git add` 对 `weird[1].md` 这类名字要加 `--literal-pathspecs`**，夹具自己的 `add` 也一样；③**`ls-files` 的 pathspec 要通配，所以这里不加 `--literal-pathspecs`**（与 `git log -- <文件>` 相反，那里的路径要按字面——`drift`、`freshness` 在各自的 `git log` 调用上加）。我最初还多写了一个 `--`，Python 版并没有，按 Python 原样改回，并加变异 L3 与一条测试（`-z`、`--others` 作「模式」传入会被 git 当选项）钉住。
+- **三个这一块暴露的、我本来不知道的事**：①**Windows 上 `col:on.md` 不报错**：NTFS 把冒号当备用数据流，建出的是名为 `col` 的文件——造夹具时必须核对「同名文件真的在目录里」才算造成；②**`git add` 对 `weird[1].md` 这类名字要加 `--literal-pathspecs`**，夹具自己的 `add` 也一样；③**`ls-files` 的 pathspec 要通配，所以这里不加 `--literal-pathspecs`**（与 `git log -- <文件>` 相反，那里的路径要按字面——实际是 `derived`、`freshness` 在各自的 `git log` 调用上加；`drift` 没有 `git log`，它的 `git blame -p --no-textconv -- <文件>` 把路径放在 `--` 之后、不带 `--literal-pathspecs`）。我最初还多写了一个 `--`，Python 版并没有，按 Python 原样改回，并加变异 L3 与一条测试（`-z`、`--others` 作「模式」传入会被 git 当选项）钉住。
 - **变异首轮 46 条里 18 条没抓住**：补输入 11 条、等价变异删除 2 条（`U5` 排序：git 按 UTF-8 字节序与 Python 码点序对 UTF-8 一致，对 git 返回的列表排序是恒等；`W4`：空串时第一支 `dirname==base` 已覆盖根下一层）、`posixOnly` 1 条（`U7`，文件名含反斜杠只有 Linux 造得出，Ubuntu 上补断言抓住）、`unobservable` 1 条（`L9`，git 的 stderr 末尾不会有 U+FEFF）；`U6`（按 UTF-16 码元排序）要夹具里同时有 `Ａ`（U+FF21）与 `😀`（U+1F600）才可观察——码点序下前者在前，码元序下 `😀` 的首码元 0xD83D 小于 0xFF21 反而在前，补了夹具。
 - **一次清理上的失误与处理**：我的一个一次性探针脚本在 Windows 上 `shutil.rmtree` 删 `.git` 里的只读对象失败，留下一个临时仓。我先核对路径确实是自己建的（精确名字、含 `.git`），去掉只读属性后删除，没有用通配批量删。这类探针以后用 `onerror` 去只读，或直接用 `tempfile.TemporaryDirectory(ignore_cleanup_errors=True)`。
 - **再一次写出了没用的断言**：`withScanMemo` 测试里有一行 `'…'.slice(0, 0) || false`（恒假的绕弯表达式），发现后改成了真断言（无模式也是又一个缓存项，它第一次被调用发生在 `late.md` 已 add 之后，所以看得到）。这是第五次。
@@ -565,21 +569,21 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 - **`str.isdigit()` 与 `\d` 是两个不同的集合**（Python 3.12 实测）：`\d` 与类别 Nd 完全相同（680 个），`isdigit()` 多 128 个（上标、下标、带圈数字等，`²`、`①`）。`evidence` 里两处都用到：行内标签前导的 `\d` 用 `\p{Nd}`；「认不出的标签」要排除纯数字（时刻 `12:30`），用的是 `isdigit()`——写成 `isPyDigit`（`\p{Nd}` 并上那 128 个）。**逐码点全量核对**：Python 为真而 TS 不认的为零；TS 多认的全是 Unicode 16、17 新增的十进制数字（Python 的 Unicode 15.0 里是未分配），同 D5，是版本差不是写法差。
 - **`re.I` 在 `evidence` 里的用法与 `findField` 不同**：同义词表里含 `i` 的词（`assertion`、`acceptance`、`limitation(s)`、`revision`、`version`、`procedure`、`environment`、`observed_at`）用 `İ`、`ı` 写也要认——复用 `core` 的 `foldRegexSource`（导出），不另起一份。变异验证发现这一分支此前没有样本触发，补了含 `İ/ı` 的 `label_field` 输入 16 条。
 - **`(.*)$` 与 `.+$` 不能照搬成 JS 的 `(.*)$`**：Python 的 `.` 只不匹配 `\n`、`$` 还匹配末尾 `\n` 之前；JS 的 `.` 还不匹配 `\r`、U+2028、U+2029，`$` 默认只匹配串尾。行里不会有 `\n`（先 `splitlines`），但**可以有** `\x0b`、`\x0c`、`\x1c`、`\x85`、`\u2028`、`\r`——Python 实测值里这些字符原样保留。写成 `([^\n]*)(?=\n?$)`，用行内特殊字符的样本钉住。
-- **新增 `pyLstrip`（`core/finding.ts`）**：`freshness.ts` 里原有一份局部的，本检查器也要用，提到 core（`freshness.ts` 的局部版本不动，不碰无关代码，阶段 4 清理时合并）。
+- **新增 `pyLstrip`（`core/finding.ts`）**：`freshness.ts` 里原有一份局部的，本检查器也要用，提到 core（至今未合并——`freshness.ts:73` 仍有局部 `pyLstrip`、`drift.ts` 另有局部 `rstripPy`，阶段 4 结束时也没有记待办；`freshness.ts` 的局部版本不动，不碰无关代码，阶段 4 清理时合并）。
 - **覆盖面的诚实说明**：真实仓里 `evidence` 只出现整齐六字段写法的 PASS（reservoir 10 条、cms 15 条），**边界写法（全角、围栏、表格、认不出的标签、各种空白）一个真实输入都没有**，所以与 `derived` 一样，判据靠 selftest 与单元样本守护。
 - **变异验证的三条教训**：①**第一轮 311 条漏 46 条，其中 23 条在补完样本、摘掉标注复验后仍漏**——它们不是「样本不够」，而是我对「这条等价」或「这条能构造」的**判断本身需要用 Python 实测**，而不是凭印象；这一轮我先在 JS 里并排比较原正则与变异后的正则对一批输入的差异，再去 Python 上对照，才分清哪些是真等价（`F4` 表头不含 `|` 时最多映射 1 种字段而表要求 ≥3 种、`F23` 含「限制」的列只会映射到 scope、`K1` 每个 key 只进「缺」或「占位」之一、`C11` 没有任何一行同时匹配两种条目头……）、哪些是真盲区（`B7`/`B8` 要用缩进或 # 后带空白的标题、`E17` 要一格含多个词、`K3` 要两个限制值一空一非空）。②**`F12` 的等价性要靠 Python 实测每个含 `|` 的行 strip 后必非空**才成立，我最初写的「等价」理由是错的（说「只含空格的行」，而那种行含 `|` 时 strip 后非空），摘标注复验时才暴露。③**`mutate.mjs` 的 `typeGuarded` 口径在这里第二次用上**（`D3` 去掉整段兜底入口后 `FieldKey | null` 的窄化变化导致编译失败）。
 - **剩余标注 15 条**，各有 Python 实测证据或等价论证：C11、E19、E29、F4、F12、F17、F23、H22、H23、H25、I15、K1、M2、M3、M15；**类型守住 1 条**：D3。
 
 ### 12.28 第八个检查器 `adoption`：第一个**有意删掉一部分**的检查器
 
-- **这是迁移里第一次不带过去一整块**。Python 版 `adoption` 的判据里有三块：①版本记录与采用日期（保留）；②`compatibility.policy`（保留）；③内嵌 `.std/` 机制（版本值与内嵌 README 修订号比对、内嵌目录只读 `git status`）与 Claude Code 的免审批清单（`.claude/settings.json` 里的通配放行判定，约 200 行）——**这一块按 §6 的约定不迁**。用户 2026-10-07 在两条残留 SKIP 上选了「两条都不迁，列入预期消失清单」：黄金样本里每个仓的 `adoption/60a5c980`（内嵌只读，非内嵌运行不适用）与 `adoption/settings-absent`（免审批清单判据本宿主无对象）。
+- **这是迁移里第一次不带过去一整块**。Python 版 `adoption` 的判据里有三块：①版本记录与采用日期（当时保留；§12.33 五后已删，`adoption` 现只剩 `compatibility.policy`）；②`compatibility.policy`（保留）；③内嵌 `.std/` 机制（版本值与内嵌 README 修订号比对、内嵌目录只读 `git status`）与 Claude Code 的免审批清单（`.claude/settings.json` 里的通配放行判定，约 200 行）——**这一块按 §6 的约定不迁**。用户 2026-10-07 在两条残留 SKIP 上选了「两条都不迁，列入预期消失清单」：黄金样本里每个仓的 `adoption/60a5c980`（内嵌只读，非内嵌运行不适用）与 `adoption/settings-absent`（免审批清单判据本宿主无对象）。
 - **新增 `golden/expected-changes.json`，把「有意不一致」从注释升格成机器可读的清单**。`golden-compare` 与 `golden-selftest` 读它：列在清单里的从期望里剔除，**但每次都把条数与 id 打印出来，不静默**；清单里每一条必须写理由（`check-adoption.test.mjs` 断言这一点）；清单里写了「TS 新增的探针」而 TS 没产出，同样算差异。清单有四类：`vanished_findings`（Python 有、TS 不再产出）、`vanished_probes`（探针随机制一起消失，4 条）、`added_probes`（替代探针，1 条）、`renamed_findings`（标题变了、id 跟着变，1 条）。设计 §6 与 §12.5 早就说过「要列预期消失清单」，到这个检查器才第一次需要，所以到这里才做成脚本能认的形式。
 - **`added_probes` 的原因**：Python 的探针 `adoption/d5d57eb2` 把 `compatibility.policy` 和免审批清单的通配放行合在一条里；后一半随废弃宿主删了，前一半不能跟着丢，所以单独成一条新探针（`adoption/f32dd8ac`），覆盖缺、空串、空列表、false 判 FAIL，字符串、映射、0 判 PASS。
 - **一个更隐蔽的 id 变化**：「项目已裁剪本检查」那条 SKIP 的标题原为「…（内嵌目录只读与 compatibility.policy 不可裁剪，照判）」，去掉「内嵌目录只读」后标题变了，**它没给 `kind`，id 是标题的 sha1 前 8 位，所以 id 跟着变**（`e4ecca44` → `0a63fe45`）。四个真实仓都没裁剪 `adoption`，样本里没有这条；SKIP 不可登记（只有未定能登记），所以没有登记会失效的后果。登记在 `renamed_findings`。**这提示：凡是没给 `kind` 的 finding，改标题就等于改 id**——本仓别处改措辞时要留意，但这次是被迫的。
 - **动笔前核对复用的 core 函数，又找出一个潜伏的缺陷并已单独提交**：`pyStr` 对列表走 `pyRepr`（对），对映射走 `JSON.stringify`（`{"d":3}`，Python 是 `{'d': 3}`）。此前所有调用点传进来的都是标量或列表，没暴露；`compatibility.policy` 常常是映射，要原样写进 evidence，这才暴露。修复是除字符串、None、布尔、数字外一律走 `pyRepr`；`golden/unit/pystr.json`（62 条）修复前 26 条不一致、修复后全过；变异 P1–P4 钉住。**这是本迁移里第二个这样的缺陷**（上一个是 `findField` 的连字符，`440d0f5`）——两次都是在迁下一个检查器前，对它要复用的 core 函数核对时发现的。
 - **没处理、也不需要处理的另一处差异（如实记）**：YAML 里的整数值浮点（`1.0`）、指数形态浮点（`1e-08`、`1e+20`）在 JS 里与 Python 的 `str()` 不同——解析器把 `1.0` 读成 number `1`，已经丢了「它是浮点」这一信息，`pyStr` 无从还原。**四个真实仓和本仓的 `project.yaml` 里没有任何浮点标量，调用点也不会把浮点写进 finding 文本**，所以不动，记为 D20（见 §12.6）。
 - **`run()` 没有包 `runGuarded`**：Python 版 `adoption.run` 直接返回 `_version + [_compatibility]`，内部异常向上抛、由 `check_all` 的外层兜。TS 保持一致，不加。变异 G5（「不过 runGuarded」）本来是照别的检查器抄的清单条目，没有对象，删了。**写变异清单时不要照抄上一个检查器的条目，先看这个检查器自己有没有那个结构。**
-- **证据**：4 个真实仓逐条一致（每仓 3 条，另 2 条按清单预期消失，未比）；selftest 8 条（Python 的 11 条 − 4 条预期消失 + 1 条新增）集合相同；`golden/unit/adoption.json`（`parse` 92、`compat` 24、`compat_shapes` 10）逐条比对；变异 82 条，Windows 与 Ubuntu 都跑，其中 6 条如实标注（B9、B12、C8、C9、C15、F4）；全量测试 Ubuntu 984 条 0 败。
+- **证据**：4 个真实仓逐条一致（每仓 3 条，另 2 条按清单预期消失，未比）；selftest 8 条（Python 的 11 条 − 4 条预期消失 + 1 条新增）集合相同〔§12.33 五之后现为：探针 2 条、变异 19 条，登记在 `test/cases/expected-changes.mjs` 的 `ADOPTION`（vanished_probes 11、added_probes 2）〕；`golden/unit/adoption.json`（`parse` 92、`compat` 24、`compat_shapes` 10）逐条比对；变异 82 条，Windows 与 Ubuntu 都跑，其中 6 条如实标注（B9、B12、C8、C9、C15、F4）；全量测试 Ubuntu 984 条 0 败。
 - **标注项的证据**：`B9`（冒号后吞空白）我最初以为是盲区，写了断言却抓不住——**用 1000 个冒号后三字符组合穷举证明 strip 后与变异完全相同**，才改标等价；`B12`（去掉 `u`）、`C8`/`C9`（再 strip 一次）同理；`C15`（`else if` 改 `if`）两张键表没有交集；`F4`（`null` 分支）被后面的对象分支冗余覆盖。**摘标注复验这一步这轮没有再验出错标的**（上两轮每次都有）。
 
 ### 12.29 第九个检查器 `single_authority`：整仓场景样本、一个发现于 Windows 的平台差异、和第一次用「满载机器」解释的偶发失败
@@ -608,7 +612,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 
 ### 12.31 汇总层 `check_all`：迁移设计（动手前，2026-10-08）
 
-**这是最后一块，也是唯一一块"不是检查器"的。** 它不判任何文档的对错，它负责：①把 11 个检查器串起来（发现、自检闸门、异常转未定、封签）；②例外登记的 join（唯一改 `registered` 的地方）；③出报告（文本、JSON、退出码）；④钉住"检查器自己是哪一套"（契约 §8 的身份）；⑤跨检查器的自检（同一事实只报一次这类，单个检查器看不见别人）。读完 Python 版 2061 行（`check_all.py`）后定如下。
+**这是最后一块，也是唯一一块"不是检查器"的。** 它不判任何文档的对错，它负责：①把全部检查器串起来（设计时数作 11，实际个数以 `src/checks/index.ts` 为准）（发现、自检闸门、异常转未定、封签）；②例外登记的 join（唯一改 `registered` 的地方）；③出报告（文本、JSON、退出码）；④钉住"检查器自己是哪一套"（契约 §8 的身份）；⑤跨检查器的自检（同一事实只报一次这类，单个检查器看不见别人）。读完 Python 版 2061 行（`check_all.py`）后定如下。
 
 **行为清单（TS 版必须与 Python 版逐 id 相同；括号内是 Python 行号）**
 
@@ -623,7 +627,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 | 7 | `main`（2027） | `--selftest`/`--json`/`--no-scope`/`--config`；退出码 FAIL→1、未登记未定→2、否则 0；自身崩溃→输出一行、退出 2 |
 | 8 | 自检（`--selftest` 与闸门之外的）| `_contract_examples_selftest`（3 条）、`_entry_smoke_selftest`（1 条）、`_shared_fact_selftest`（6 条，一条内含多个子断言）、`_embedded_readonly_selftest`（1 条，**对象已废弃**）、`_git_env_selftest`（1 条）、`_hostile_git_config_selftest`（1 条）、`_stdlib_selftest`（约 66 条，stdlib 层） |
 
-**取舍 1：TS 版的"检查器身份"哈希什么？** Python 版哈希 `check_all.py + stdlib.py + CONTRACT.md + checks/check_*.py`（源码文件）。TS 版的"决定行为的内容"是 `lib/**/*.js`（运行的是它），`src/` 只是它的来源，`lib/` 又由 `check-lib-sync` 钉住等于 `src/` 的构建。所以**哈希 `lib/` 下全部 `.js` + `CONTRACT.md`**（行尾归一化规则不变）；`lib/` 与 `src/` 的一致性由第四道闸门管，不由身份管（两者职责不同：身份回答"这次报告是哪一套跑出来的"，不回答"这一套是不是由当前源码构建的"）。**这会让 `tool-identity` 一项必然与黄金样本不同**，已在 §6 登记为预期差异，对比时排除。
+**取舍 1：TS 版的"检查器身份"哈希什么？** Python 版哈希 `check_all.py + stdlib.py + CONTRACT.md + checks/check_*.py`（源码文件）。TS 版的"决定行为的内容"是 `lib/**/*.js`（运行的是它），`src/` 只是它的来源，`lib/` 又由 `check-lib-sync` 钉住等于 `src/` 的构建。所以**哈希 `lib/` 下全部 `.js` + `CONTRACT.md`**（行尾归一化规则不变）；`lib/` 与 `src/` 的一致性由第四道闸门管，不由身份管（两者职责不同：身份回答"这次报告是哪一套跑出来的"，不回答"这一套是不是由当前源码构建的"）。**这会让 `tool-identity` 一项必然与黄金样本不同**，已在 §12.1 登记为预期差异（原写 §6，指向有误），对比时排除。
 
 **取舍 2：Python 专有机制不迁，各自写清为什么没有对象。** 以下 stdlib 层探针在 TS 里没有可断言的对象，**不复刻、不假装通过**，在 `golden/expected-changes.json` 的 `vanished_probes` 里各写一条理由：
 
@@ -690,7 +694,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 
 读 01 §8 与 `adoption.ts`：它承载"项目显式评估后才升级、不在任务中自动跟随"这条治理要求，防的是"标准悄悄变了、检查结论随之变了"。**但 `adoption` 对它的值一个字也不核对**（源码自述"记得对不对一处也不判"），三个项目的升级记录里还留着"pull 后未改版本号 → 多 1 条 FAIL"这种顺序坑。**一份人维护、机器不核对的声明——这是最该被消灭的那类东西。**
 
-**去路：不留。**版本钉由 profile 的 `package.json` + `pnpm-lock.yaml` 承担（`dsh plugin add …#<tag>` 本来就写进去，机器维护、有完整性校验），报告里**自动**带上"本次检查依据的版本摘要"（已有的 `tool-identity` 摘要覆盖 `lib/` 与契约，再把 `标准/` 与 `templates/` 的内容哈希并入，改动量很小）。"项目显式评估升级"变成：升级是一次显式的 `dsh plugin update`，留痕在 lockfile 的 git 历史里；评估材料是升级前后同一项目的 `std-check --json` 逐 id 差异——**由工具产生，不由人记**。
+**去路：不留。**版本钉由 profile 的 `package.json` + `pnpm-lock.yaml` 承担（`dsh plugin add …#<tag>` 本来就写进去，机器维护、有完整性校验），报告里**自动**带上"本次检查依据的版本摘要"（已有的 `tool-identity` 摘要覆盖 `lib/` 与契约，再把 `标准/` 与 `templates/` 的内容哈希并入，改动量很小）。**〔更正：没有落地——`tool-identity` 至今只哈希 `lib/**/*.js` 与 `tools/std/CONTRACT.md`（`src/check_all.ts`），不含标准正文；标准正文以生成的 `skills/` 入包，见 §12.35。〕**"项目显式评估升级"变成：升级是一次显式的 `dsh plugin update`，留痕在 lockfile 的 git 历史里；评估材料是升级前后同一项目的 `std-check --json` 逐 id 差异——**由工具产生，不由人记**。
 
 **接受的代价**（如实）：profile 是用户级的，三个项目共用一个 profile，所以**不能各自钉在不同版本**。这条能力（§10 的"采用项目钉旧 tag 不受影响"）在"只有一个维护者"的现状下是为不存在的场景付费；将来真有第二个使用者，再加"项目可选声明期望版本、不符则记未定"，是向后兼容的增量，现在不做。
 
@@ -716,7 +720,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 #### 四、阶段 3 的范围（Alan 2026-10-09 确认）
 
 **做**（确定、可由黄金样本证明零行为变化）：
-1. **`标准/` 与 `templates/` 入包**，插件新增**标准技能提供者**（`registerProvider`，正文随包、只读）；`files` 白名单补上，**有测试断言装到的包里有它们**。
+1. **`标准/` 与 `templates/` 入包**〔更正：实际形态是由 `scripts/build-skills.mjs` 生成 `skills/*.md` 入包，`files` 里没有这两个目录〕，插件新增**标准技能提供者**（`registerProvider`，正文随包、只读）；`files` 白名单补上，**有测试断言装到的包里有它们**。
 2. **删 `.std/`**（`git rm -r .std`）、**删 `governance/STANDARD_VERSION`**；`adoption` 检查器的"版本记录"判据随之改写（见下）。
 3. ~~**删 18 处与缺省相同的冗余声明**（机械、零行为变化）。~~ **已撤出（2026-10-09 实测更正，见下文「更正」）。**
 4. **提交钩子**改调 `std-check`（§4.1 已实测的写法：用 `DSH_HOME` 定位 node，不依赖 PATH）。
@@ -734,11 +738,11 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 
 #### 五、`adoption` 检查器怎么改（需要同步，避免文档先于实现）
 
-"版本记录"判据的对象（`governance/STANDARD_VERSION`）消失，原判据意图是"升级是显式的、可追溯的"。TS 版改为：①读**报告自带的版本摘要**（工具自己产生，不再需要项目记）；②`compatibility.policy` 判据**不变**（它读 `project.yaml`，与版本无关）；③黄金样本里 `adoption/version-record*` 等 id 登记为 `vanished_findings`（理由：对象已由 lockfile 取代）。**这是对已验收的 `adoption` 的又一次有意改动，要走与 §12.28 同样的登记流程。**
+"版本记录"判据的对象（`governance/STANDARD_VERSION`）消失，原判据意图是"升级是显式的、可追溯的"。TS 版改为：①**不再有版本判据**——不读任何项目里的版本文件，版本由锁文件和报告自带的工具身份摘要承担（`src/checks/adoption.ts` 头注）；②`compatibility.policy` 判据**不变**（它读 `project.yaml`，与版本无关），现在是 `adoption` 仅存的判据；③黄金样本里版本记录判据的 id（实际是 `adoption/8714bd62`、`adoption/8baf1c92`）登记为 `vanished_findings`（理由：对象已由 lockfile 取代）。**这是对已验收的 `adoption` 的又一次有意改动，要走与 §12.28 同样的登记流程。**
 
 #### 六、验证与回退
 
-- **合成夹具**（本仓内，`test/fixtures/adopter/`）：含 `.std/` 副本、`governance/STANDARD_VERSION`、三种钩子形态（`.githooks/pre-commit`、pre-commit 框架的折叠块 YAML、自写的 `tools/hooks/common.sh`）、冗余声明、`CLAUDE.md`/`.claude/` 残留。迁移前后各跑 `std-check`，**逐 id 对比**，差异只允许来自登记的预期消失项。
+- **合成夹具**（设计时写作本仓内 `test/fixtures/adopter/`；**实际**是 `test/migrate.test.mjs` 里的 `adopter(flavor)` 函数在临时目录现造，不落盘）：含 `.std/` 副本、`governance/STANDARD_VERSION`、三种钩子形态（`.githooks/pre-commit`、pre-commit 框架的折叠块 YAML、自写的 `tools/hooks/common.sh`）、冗余声明、`CLAUDE.md`/`.claude/` 残留。迁移前后各跑 `std-check`，**逐 id 对比**，差异只允许来自登记的预期消失项。
 - **三个真实项目只写材料**：每个项目一份"改什么、验什么、怎么回退"，**不执行**（硬约束 4）。回退 = `git revert` 迁移提交。
 - **三个项目的专属点**（读真实文件所得，不是推测）：Reservoir 钩子是 `.githooks/pre-commit`，`exec "$PY" .std/tools/std/check_all.py`，借 `pick-python.sh`；CMS 是 `.pre-commit-config.yaml` 的折叠块（`entry: >-`），且 `layout.rule_files` **自己声明**了 `.claude/` 与 `CLAUDE.md`（"退役仓可能仍按旧宿主落地，删了是放宽扫描"）——**保不保留是 CMS 自己的决定**，脚本只列出、不替它定；PMC 的钩子是自己的 `tools/hooks/{pre-commit,pre-push,common.sh}`，选 Python 用自己的 `hook_pick_python`，大量 `docs/plans/`、`分析/` 历史文档引用 `.std/` 路径——**历史记录，不改**。
 
@@ -746,7 +750,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 
 **形状（Alan 选）**：命令**只读**，输出迁移方案；执行交给会话里的 agent，用平台已有的 edit／write／审批，人审阅。**不做 `--apply`**——写文件意味着写前备份、原子写、失败回滚、不碰 `.git`、拒绝脏工作区，是本仓从没有过的、安全敏感的一整套；三个项目的钩子又是三种形态，各要一个解析器。让模型逐步执行同样的步骤，既复用平台的审批，又不引入这套代码，也符合"能由模型可靠完成的不写成长期维护的代码"。
 
-**方案的构成**：每一步标 `确定`（给精确的 git 命令）或 `需判断`（只给命中的行号与原文加建议，不替人定），都带验证与回退。次序固定且有理由：**先改钩子、再删 `.std/`**——反过来旧钩子找不到检查器，提交会被拒；钩子步骤在新插件未装入 profile 时标 `blocked` 并说清缺什么（失败关闭，不假装能调）。检测靠 `$DSH_PROFILE_DIR/node_modules/ai-dev-std/lib/cli.js` 是否存在；DSH 之外没有该变量就如实说检测不到。
+**方案的构成**：每一步标 `确定`（给精确的 git 命令）或 `需判断`（只给命中的行号与原文加建议，不替人定），都带验证与回退。次序固定且有理由：**先改钩子、再删 `.std/`**——反过来旧钩子找不到检查器，提交会被拒；钩子步骤在新插件未装入 profile 时标 `blocked` 并说清缺什么（失败关闭，不假装能调）。检测靠 `$DSH_PROFILE_DIR/node_modules/dsh-project-std/lib/cli.js` 是否存在（当时写的是改名前的 `ai-dev-std`，§12.39 后已改）；DSH 之外没有该变量就如实说检测不到。
 
 **对三个真实项目实读后发现并修掉的缺陷**（只读了它们的文件，一字节没写）：①我原先把每个"固定候选钩子文件"都列成要改的——PMC 的 `tools/hooks/pre-commit` 不调检查器（闸门①已搬到 pre-push），列它是造假工作；现在固定候选也必须**真的调用旧检查器**才算。②钩子目录里的 `README.md` 只是写着旧命令的文档，不是钩子；现在 `.md`／`.txt` 不算钩子，它归"文档引用"一步。③ `frozen` 里认 `.std` 项最初用 `\b` 词边界，会把 `.std-cache`、`.std.bak` 当成要删的（`-` 与 `.` 两侧也是词边界）——改成锚定行尾。三处都是测试或实读才暴露，不是读代码能看出来的。
 
@@ -754,7 +758,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 
 **验证数字**：测试 1285 条（Windows 通过，Ubuntu 容器同样 0 败）；变异 29 条，28 条抓住、1 条有实测证据的不可观察（`runMigrate` 的 catch 是程序错误兜底——实测 `plan` 对任何字符串根含 NUL、不存在、指向文件都不抛，只有非字符串根才抛，而命令行的根恒为字符串）。
 
-**三个真实项目的方案（只读生成，未执行）**：Reservoir 与 CMS 各是 钩子→删 `.std/`→删版本声明→`frozen`→文档引用→对账 六步，钩子分别是 `.githooks/pre-commit` 与 `.pre-commit-config.yaml` 的折叠块；PMC 钩子只有 `tools/hooks/pre-push` 一处。**这三份方案现在都因"新插件还没装入 profile"而钩子步骤 blocked**——这是真实状态，不是缺陷：执行迁移的前提是先用 git 地址安装并重启 DSH，阶段 5 的"发布新 tag 并从 tag 安装验证"之后才具备。
+**三个真实项目的方案（只读生成，未执行）**：Reservoir 与 CMS 各是 钩子→删 `.std/`→删版本声明→`frozen`→文档引用→对账 六步，钩子分别是 `.githooks/pre-commit` 与 `.pre-commit-config.yaml` 的折叠块；PMC 钩子只有 `tools/hooks/pre-push` 一处。**这三份方案当时（2026-10-09）都因"新插件还没装入 profile"而钩子步骤 blocked**（现已具备前置：`v0.1.0` 已发布并装入真实 profile，见 §12.43；三个旧项目的迁移仍未执行）——这是当时的真实状态，不是缺陷：执行迁移的前提是先用 git 地址安装并重启 DSH，阶段 5 的"发布新 tag 并从 tag 安装验证"之后才具备。
 
 **没做、明确留给后面**：①`AGENTS.md` 等自然语言文档里 `.std/` 引用怎么改措辞——方案只列命中，由会话模型处理、人审阅；②CMS 自己声明的 `layout.rule_files` 含 `.claude/` 与 `CLAUDE.md`（"退役仓可能仍按旧宿主落地，删了是放宽扫描"）——保不保留是 CMS 自己的决定，脚本只列出、不替它定；③PMC 里大量历史计划／复核文档引用 `.std/` 路径——历史记录，方案已排除、不改；④设计 §12.33 的"AI 维护配置、放宽须人确认"里程碑。
 
@@ -836,7 +840,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 | adoption 的重命名 | `e4ecca44` → `0a63fe45` | "项目已裁剪本检查"的标题去掉了"内嵌目录只读"，id 是标题哈希所以跟着变；四个真实仓都没裁剪 adoption，SKIP 不可登记，无失效后果 |
 | 汇总层的探针 | Python 专有现象 9 条消失、1 条新增 | 递归上限、`realpath` 调用次数、`__pycache__`、`sys.path[0]` 劫持、`sys.exit` 转未定、`discover` 缓存——对象是 Python 的机制，Node 里不存在；`sys.exit` 的替代是 `scripts/check-py-semantics.mjs` 对 `process.exit` 的机械禁止（`stdlib/3ac5e0b9`） |
 
-**当前状态（终态，2026-10-10 补）**：`test/fixtures/` 目录已不存在，33 个夹具全部换成 `test/cases/*.mjs`。后三个也已做完：`sa-scenarios`（24 个整仓场景）无损搬出；`cr-scenarios`（148 个场景，1 MB）先对 318 条变异逐条记录“哪些场景抓住它”（后台约 80 分钟）——结论是 148 个场景**每一个都至少抓住一条变异**，贪心最小覆盖也要 77 个，且 99 条变异只被 1 个场景抓住，所以**不合并、不删场景**，只把两个超大场景（6005 份 md、64 KB 头部）改成生成式，1056 KB → 474 KB，回读逐项相同；`codepoint` 改公式后 7 条变异全部抓住。`expected-changes` 的登记保留为 `test/cases/expected-changes.mjs`。
+**当前状态（终态，2026-10-10 补）**：`test/fixtures/` 目录已不存在，32 个夹具（按职责合并）换成 27 个 `test/cases/*.mjs` 用例表。后三个也已做完：`sa-scenarios`（24 个整仓场景）无损搬出；`cr-scenarios`（148 个场景，1 MB）先对 318 条变异逐条记录“哪些场景抓住它”（后台约 80 分钟）——结论是 148 个场景**每一个都至少抓住一条变异**，贪心最小覆盖也要 77 个，且 99 条变异只被 1 个场景抓住，所以**不合并、不删场景**，只把两个超大场景（6005 份 md、64 KB 头部）改成生成式，1056 KB → 474 KB，回读逐项相同；`codepoint` 改公式后 7 条变异全部抓住。`expected-changes` 的登记保留为 `test/cases/expected-changes.mjs`。
 
 **没做、明确留着**：`golden-compare` 系列脚本已删除，所以“对 4 个真实仓逐条一致”的测试不再存在——这个保护被**有意放弃**（对象是 Python 版），换成的是“`std-check` 对本仓实跑退出 0”与每个检查器的 selftest 清单。
 
@@ -880,7 +884,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 
 **九、残留白名单检查做成第五道钩子（Alan 认可的口径）**：`scripts/check-residue.mjs`，每项白名单写理由；`test/residue.test.mjs`（8 条）加 `test/mutations/residue.json`（23 条，全部抓住）。变异首轮暴露 3 处盲区（`.json` 扩展名、中文路径被 git 转义、白名单顺序语义——最后一条经实证等价，删除）。**白名单的粒度本身被测试钉住**：同一目录下“相近但不同”的路径（`docs/决策日志副本.md`、`src/core/fs.ts`、`tools/std/NOTES.md`……）不放行，防止白名单被写成前缀通配。钩子第五道在用户 cmd 的真实环境下验证：干净仓通过，新增一句 `.std/` 被它拦下。
 
-**仍待办**：②D-108 与 `ai-dev-std`；③换装真实 profile 后删 `tools/dsh-std/`——**真实 profile 由桌面版独占管理，命令行改会与运行中的桌面应用争用状态，所以这一步由 Alan 在 Plugins 页操作**，备份已做在 `~/.dsh/profiles/desktop.backup-before-ai-dev-std-20261010`；冻结历史移除。
+**仍待办**：②D-108 与 `ai-dev-std`；③换装真实 profile 后删 `tools/dsh-std/`——**真实 profile 由桌面版独占管理，命令行改会与运行中的桌面应用争用状态，所以这一步由 Alan 在 Plugins 页操作**，备份已做在 `~/.dsh/profiles/desktop.backup-before-ai-dev-std-20261010`；冻结历史移除。**→ ③与冻结历史移除已完成，见 §12.40、§12.41；仍待办的只有 ②D-108 的取代。**
 
 ### 12.39 改名为 dsh-project-std（2026-10-10）
 
@@ -1003,6 +1007,8 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 
 零差异是对「真实仓的 finding 集合」与「探针」说的；**单个函数在极端输入上**允许有下表这些有意差异。每条都要有：Python 的行为、TS 的行为、为什么、谁定的。没写在这里的差异都是 bug。
 
+> 表内 `golden/…` 路径指阶段 4 之前的树，现仅存于标签 `archive-pre-ts-refactor`；对应的期望值现在在 `test/cases/`。
+
 | # | 函数 | Python 版 | TS 版 | 理由 | 决定 |
 |---|---|---|---|---|---|
 | D1 | `parse_date` | 用 `fromisoformat`：3.12 上接受紧凑型 `20261006`、周日期 `2026-W41-2`、`2026-10-06T10`（仅小时）、小数秒截断等；这是 3.11 起的偶然放宽，3.8 到 3.10 不接受 | 只收契约写的 `YYYY-MM-DD` 与标准 ISO8601（`T` 或空格分隔，`HH:MM[:SS[.f]]`，`Z`/`z`/`±HH[:MM]`） | 契约只写这两种；实测四个真实仓的 186 个日期字段里 0 个用到被放宽的写法；固化运行时偶然行为会让行为随版本变 | Alan 2026-10-06 选「按契约严格解析」 |
@@ -1033,7 +1039,7 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 | 日期 | 变更 | 原因 |
 |---|---|---|
 | 2026-10-06 | 初版 | Alan 决定重构；写完设计文档后才开发 |
-| 2026-10-10 | **发布 v0.1.0**，记 §12.43：第一个 semver 标签，解引用到 `4f93ecb`；真实 profile 已锁定该提交；重启 DSH 后的真实会话行为未验证（Alan 暂不能重启） | 阶段 5 的“在真实 DSH 里从该标签安装”已做到锁定与磁盘，会话内实测留待重启 |
+| 2026-10-10 | **发布 v0.1.0**，记 §12.43：第一个 semver 标签，解引用到 `4f93ecb`；真实 profile 已锁定该提交；重启 DSH 后的真实会话行为未验证（Alan 暂不能重启；**已于同日重启后验证，见 §12.43 与下一行**） | 阶段 5 的“在真实 DSH 里从该标签安装”已做到锁定与磁盘，会话内实测留待重启 |
 | 2026-10-10 | **版本管理改为 semver 单一权威**，记 §12.42：发布标签 = `v` + `package.json` 的 `version`；`check-release-tag.mjs` 打标签前只读检查；变异首轮 19/20，补真实 HEAD 断言后 20/20；设计 §4 与 Q1 里“日期标签”的旧文字划掉并指向本节 | 改变了 Alan 此前确认的 Q1，以他现在的话为准 |
 | 2026-10-10 | **冻结历史的移除（只移 docs/归档）**，记 §12.41：量出依赖面比此前说的大得多（标准正文有 143 条依据链接指向研究卡片），改为只移归档区；1102 个文件逐个核对在 tag 里且逐字一致；72 条链接目标改写（现行 25＋冻结区 47）逐文件核对；Windows PowerShell 5 的中文路径编码陷阱靠“先核对计数”拦住 | 网页链接 503（API 与 raw 可达）；批量 git rm 在我这一侧被拦 |
 | 2026-10-10 | **按官方清单规范补齐、删旧插件目录、归档公开仓的实测**，记 §12.40：`engines.dsh`、清单合规测试 25/25 变异抓住；README 断言先核实，发现守卫 `Verdict` 类型留着已不产出的 deny 并收窄；删 `tools/dsh-std/` 与守卫里的硬编码规则；归档后 `subtree add/pull` 匿名仍成功 | 官方默认分支是 `master`，按 `main` 取失败；`dsh.compatibility` 不在官方规范里，不抄 |
