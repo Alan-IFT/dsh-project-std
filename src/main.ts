@@ -53,7 +53,7 @@ export function pluginInstalled(env: NodeJS.ProcessEnv = process.env): true | { 
 /** `std-check migrate [项目根] [--json]`：只读，输出迁移方案。退出码 0＝方案已给出（含"无需迁移"）；2＝命令自身出错。 */
 function runMigrate(args: Args, io: Io): number {
   try {
-    const p = plan(args.root, pluginInstalled())
+    const p = plan(args.root, pluginInstalled(), args.config)
     io.out(args.json ? JSON.stringify(p, null, 2) : renderPlan(p))
     return 0
   } catch (exc) {

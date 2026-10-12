@@ -1,6 +1,6 @@
 // TS 版与迁移前 Python 版**有意不一致**的清单：对应的机制已废弃（内嵌 .std/、Claude Code 的 settings.json、STANDARD_VERSION、Python 专有现象），
 // 每条写明理由，不静默。Python 版已删除，所以这份登记不再被比对脚本读取，只作为「这些检查为什么没有了」的记录，
-// 并被 check-adoption.test.mjs（登记必须写理由、adoption 的 selftest 清单）与 migrate.test.mjs（迁移前后 adoption 的预期消失项）引用。
+// 由 check-adoption.test.mjs 核对登记理由与 adoption 的 selftest 清单；同一修复工具的迁移前后对账不引用本历史消失登记。
 // 设计文档 §12.37 有同一份的人读版本。
 
 export const ADOPTION = {
