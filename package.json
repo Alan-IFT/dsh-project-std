@@ -35,7 +35,9 @@
     "tools/std/CONTRACT.md",
     "cordis.patch.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "templates/WORK_ITEM.md",
+    "LICENSE-DOCS"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
