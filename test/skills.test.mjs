@@ -115,7 +115,7 @@ test('守卫入口（.）：不依赖任何服务（inject 为空）——缺 ds
   // 守卫入口的 apply 只挂 tools/pre-execute，不访问 ctx.skills（访问会抛，所以给一个一碰就抛的 ctx）
   const events = []
   const ctx = new Proxy({ on: (n) => events.push(n) }, { get: (t, p) => { if (p === 'skills') throw new Error('cannot get property "skills" without inject'); return t[p] } })
-  assert.doesNotThrow(() => guardPlugin.apply(ctx, { enabled: true }))
+  assert.doesNotThrow(() => guardPlugin.apply(ctx, { enabled: true, policyVersion: 2, projects: [{ root: WIN_ROOT(), protect: ['explicit-fixture'] }] }))
   assert.deepEqual(events, ['tools/pre-execute'])
 })
 
@@ -171,3 +171,15 @@ test('package.json：files 白名单含 skills；bin 含 std-check；装到的�
   for (const f of readdirSync(join(root, 'skills'))) assert.ok(statLike(f))
 })
 const statLike = (f) => f.endsWith('.md') || f === 'index.json'
+const WIN_ROOT = () => process.platform === 'win32' ? 'D:\\skills-fixture' : '/skills-fixture'
+
+test('默认接线：主入口 disabled/v2/空项目不挂监听，技能仍启用且稳定两 id', () => {
+  const events = []
+  guardPlugin.apply({ on: (event) => events.push(event) })
+  assert.deepEqual(events, [])
+  const y = readFileSync(join(root, 'cordis.patch.yml'), 'utf8')
+  const [main, skills] = y.split('    - id: dsh-project-std-skills')
+  assert.match(main, /enabled: false/); assert.match(main, /policyVersion: 2/); assert.match(main, /projects: \[\]/)
+  assert.match(skills, /enabled: true/)
+  assert.equal((y.match(/    - id:/g) || []).length, 2)
+})

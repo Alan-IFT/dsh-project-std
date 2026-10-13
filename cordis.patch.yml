@@ -1,15 +1,12 @@
-# dsh-project-std bundle 层：把守卫与标准技能挂进 profile（同一个包挂两行，原因见 src/skills_plugin.ts 头注释）。
-# `name` 必须等于 package.json 的包名（DSH 按它解析到已装的包）；`dsh-project-std/skills` 是包的 exports 子路径。
-# `id` 是 profile 里这一行的稳定标识，同 id 可在 profile 的 cordis.patch.yml 里覆盖（覆盖会替换整块 config，要写全）。
+# 同包两个稳定 id；覆盖 config 时须写全。主插件默认不登记项目、不挂路径监听。
 - insert:
     - id: dsh-project-std
       name: dsh-project-std
       config:
-        enabled: true
-        root: ''            # 项目根；空串 = 取会话工作目录。会话在子目录开时请在 profile 的 cordis.patch.yml 里按 id 覆盖并写上（覆盖会替换整块 config，要写全）
-        protect: []         # 额外受保护的路径（相对项目根，整段匹配；命中就先问人）。默认空：采用项目自己的 src/、lib/、package.json 不被误伤。
-                            # 只有开发本插件的仓库才需要在 profile 里按 id 覆盖并写上，见 README「保护本插件自己的源码」。
+        enabled: false
+        policyVersion: 2
+        projects: []
     - id: dsh-project-std-skills
       name: dsh-project-std/skills
       config:
-        enabled: true       # 标准正文以技能形态随插件分发；需要 skills 服务（@deepseek-ai/dsh-skill），缺它时本行等待、不报错，守卫照常
+        enabled: true       # 技能独立启用，仍依赖宿主 skills 服务。

@@ -1,10 +1,10 @@
 # 项目状态
 
-status_revision：`36`
+status_revision：`39`
 corpus_version：`v0.7-theory-draft`  ← **全仓唯一权威版本号**。各文档不再各自声明版本（2026-09-03 去掉 26 处副本，取值曾在 v0.5/v0.6/v0.7 之间漂移）。冻结快照 `docs/归档/历史/`、研究材料与 `.staging/` 保留各自的版本号，那是它们被冻结时的值。  
-updated_at：2026-10-06
-last_status_change：2026-10-04（受支持宿主收为 DeepSeek Harness 一家，见 D-135；逐轮经过只看 git log 与审计记录）
-当前里程碑：**本仓只支持 DeepSeek Harness（DSH），不再支持 Claude Code（[D-135](docs/决策日志.md#decision-index)）；执行层是本仓根目录的 DSH 插件 `dsh-project-std`（守卫在 `src/guard/`，检查器 `std-check` 在 `src/checks/`，设计与进度账见[重构设计](docs/重构设计-TS插件化.md)）；它已在隔离 profile 与重启后的真实 DSH 会话里验证（装入、技能加载、守卫询问被 DSH 采纳；依据与剩余未验证项见[重构设计 §12.43](docs/重构设计-TS插件化.md)）。**研究架构保持现有组织；候选标准增加长期管理、架构演进、Agent 治理与运行维护内容，具体交付和检查见[本轮完善记录](docs/审计记录/本轮完善记录.md)。实际项目效果仍待验证；规则效力只查生效登记表。
+updated_at：2026-10-12
+last_status_change：2026-10-12（用户批准插件职责收缩方向，源候选已编码并正常编译，本地回归、变异与代表性宿主接缝验收已取得独立证据，提交范围收口中；逐轮经过只看 git log 与专项报告）
+当前里程碑：**本仓只支持 DeepSeek Harness（DSH），不再支持 Claude Code（[D-135](docs/决策日志.md#decision-index)）；插件提供标准技能与 `std-check`，本轮[守卫职责收缩候选](docs/守卫职责收缩设计.md)已编码并正常编译、独立静态复审已完成，本地回归与九项变异验证通过，真实 ASAR 隔离组合的配置挂载与工具审批接缝已通过独立核验；最终文档与隔离提交范围仍在收口。未提交、安装或发布。用户通过正常入口启用审批后，入口文档已正常同步，原拒绝历史保留。候选默认关闭，只支持显式项目路径的结构化 write/edit 人审要求，接入与限制见 [tools/std/README](tools/std/README.md#dsh-接法)。共享 desktop 仍是旧包与原配置，历史旧版装入、技能与询问采纳证据见[重构设计 §12.43](docs/重构设计-TS插件化.md)，不证明本轮新层已启用。**研究架构保持现有组织；候选标准与采用检查见[本轮完善记录](docs/审计记录/本轮完善记录.md)。实际项目效果仍待验证；规则效力只查生效登记表，D-108／D-137 与发布流程不在本轮改写。
 状态：进行中  
 状态负责人：用户与 AI 共同维护
 
@@ -46,7 +46,7 @@ last_status_change：2026-10-04（受支持宿主收为 DeepSeek Harness 一家�
 
 ## 下一步
 
-**D-135 已收尾（2026-10-05）**：守卫已装进本机 profile 并真跑过；提交闸门在 Windows 上经真实 `git commit` 走过；Reservoir、CMS、PMC-Planner 三个采用项目都已迁到 DSH 接法并推送（PMC-Planner 另按 ADR-0026 同时支持 Linux 与 Windows）。**已验证（2026-10-06）**：子 agent 与 `subagent_fork` 两条路径都继承守卫（对 `.std/` 的 `write` 与重定向都被拒、未落盘）；插件单测在 Ubuntu 24.04＋Node 24 容器里（真实 `git clone`）471 条 0 失败（22 条是只在 Windows 成立的路径语义，跳过不算通过），Windows 本机 470 过 0 败；`bash` 工具名与 `pwsh` 同一套判定、只有转义方言不同。**不由本仓验证**：DSH 在 Ubuntu 上如何加载插件是 DSH 自己的行为。**已发布 `2026-10-05.1`（2026-10-06）**：此前 Alan 2026-10-05 定「不发」（两处守卫误报修复不值得单发新 tag）；2026-10-06 Alan 说「都做了吧，该抽成公共就抽成公共」，抽出提交钩子选 Python 的公共写法 `tools/std/pick-python.sh` 是实质改动，所以发了新版并把那两处修复一并带出，原因变了、不是反悔。内嵌版本：**CMS、Reservoir、PMC-Planner 三个采用项目都已升到 `2026-10-05.1` 并推送**（Reservoir 是等它在开发中的改动被开发侧提交、工作区变干净后升的——`subtree pull` 要求工作区干净，我没有碰它那 50 条在途改动；PMC-Planner 的钩子是自己的、不调用公共写法，只升版本号）。Reservoir 的钩子与 CMS 的 pre-commit entry 已改引用 `pick-python.sh`，标准仓自己的钩子也是。见[会话交接](docs/附录-载体实例/会话交接.md)。本机 profile 链接的是标准仓 `main` 那份守卫，改后要重启 DSH 才加载。
+**历史旧版记录（2026-10-05／06，不证明本轮职责收缩候选已安装）**：守卫已装进本机 profile 并真跑过；提交闸门在 Windows 上经真实 `git commit` 走过；Reservoir、CMS、PMC-Planner 三个采用项目都已迁到 DSH 接法并推送（PMC-Planner 另按 ADR-0026 同时支持 Linux 与 Windows）。**已验证（2026-10-06）**：子 agent 与 `subagent_fork` 两条路径都继承守卫（对 `.std/` 的 `write` 与重定向都被拒、未落盘）；插件单测在 Ubuntu 24.04＋Node 24 容器里（真实 `git clone`）471 条 0 失败（22 条是只在 Windows 成立的路径语义，跳过不算通过），Windows 本机 470 过 0 败；`bash` 工具名与 `pwsh` 同一套判定、只有转义方言不同。**不由本仓验证**：DSH 在 Ubuntu 上如何加载插件是 DSH 自己的行为。**已发布 `2026-10-05.1`（2026-10-06）**：此前 Alan 2026-10-05 定「不发」（两处守卫误报修复不值得单发新 tag）；2026-10-06 Alan 说「都做了吧，该抽成公共就抽成公共」，抽出提交钩子选 Python 的公共写法 `tools/std/pick-python.sh` 是实质改动，所以发了新版并把那两处修复一并带出，原因变了、不是反悔。内嵌版本：**CMS、Reservoir、PMC-Planner 三个采用项目都已升到 `2026-10-05.1` 并推送**（Reservoir 是等它在开发中的改动被开发侧提交、工作区变干净后升的——`subtree pull` 要求工作区干净，我没有碰它那 50 条在途改动；PMC-Planner 的钩子是自己的、不调用公共写法，只升版本号）。Reservoir 的钩子与 CMS 的 pre-commit entry 已改引用 `pick-python.sh`，标准仓自己的钩子也是。见[会话交接](docs/附录-载体实例/会话交接.md)。本机 profile 链接的是标准仓 `main` 那份守卫，改后要重启 DSH 才加载。
 
 当前工作：在两轮资料补充基础上，按用户确认的评审建议加入[反馈跨任务生效演练](标准/示例项目-连锁零售中台/反馈跨任务生效演练.md)，专项范围与检查见[完善记录](docs/审计记录/本轮完善记录.md#feedback-exercise)。下一步由采用项目选有原始证据的一条关键旅程试用，按[试点通过条件](标准/覆盖与采用检查.md#pilot-exit)及适用的反馈演练取证，验证执行效果与维护成本；尚未运行的分支保留未定。后续资料按真实缺口选取，研究正文的待裁事项仍只由决策索引管理。[D-057](docs/决策日志.md#effective-register) 于 2027-02-17 复审时，一并复核 [D-061](docs/决策日志.md#decision-index) 的六组跨章边界。2026-09-09 另追加一轮 OpenAI/Anthropic 官方近半年文章专项（管理/运维/上下文三方向共 13 张卡 M-21~25、O-16~20、C-20~22，落进 01/02/03/04），见[完善记录·追加专项](docs/审计记录/本轮完善记录.md#addendum-2026-09)。
 

@@ -28,7 +28,7 @@
 
 - `lib/` 是 `src/` 的构建产物，**提交进 git**。原因：pnpm 从 git 装包默认拒绝执行构建脚本，装入时没有构建步骤；`scripts/check-lib-sync.mjs` 与提交钩子保证它等于 `src/` 的构建结果（设计文档 §4）。
 - `lib/selftest*.js`、`lib/core/fixture.js` 是 `std-check --selftest` 的自检夹具，不是测试代码残留：它们造临时目录和临时 git 仓来验证检查器自己，**只写系统临时目录，不写被扫项目**。
-- 守卫只做一件事：对受控动作（强推、`reset --hard`、打标签、`--no-verify`、改钩子、改入口指令文件……）返回**询问**，由人批准或拒绝。它**只产出询问与放行，不产出拒绝**，不读也不写网络，不碰项目文件。命令串分析是尽力而为的预过滤，不是安全边界，盲区见下文「DSH 接法」。
+- 项目路径层是本轮未发布候选：默认关闭，只对显式登记项目的 `write`／`edit` 结构化路径要求人审；不做通用 Shell/Git 风险判定。它仅加入 `ask` 或弃权，下游的 `ask`／`deny`／`cancel` 原样保留，审批归宿主；配置、升级与未覆盖面统一见下文「DSH 接法」，不据候选文档推断共享 profile 已启用。
 - `skills/` 是 `标准/` 与 `templates/` 的正文，由 `scripts/build-skills.mjs` 生成，`check-skills-sync` 保证与源一致；技能由 DSH 的技能服务在会话里按需加载。
 - 声明兼容的 DSH 版本（`package.json` 的 `engines.dsh`）只有实际验证过的一个：`0.2.0-rc.2`。官方规范说该字段是声明式的、安装器不强制检查，所以这是给人看的，不是挡路的。
 
@@ -133,50 +133,58 @@
 
 审批为 `never` 时，宿主自动拒绝所有触发 `ask` 的动作；这不等于所有普通写入都禁止。可以继续只读盘点、准备差异和验证清单，但**聊天中的“允许继续”不等于工具层批准**。遇到受控动作应停止执行该项，不能拆命令、换工具或改写路径绕过守卫。可由人通过宿主正常权限入口启用审批后在父会话执行，或由人亲自按审阅方案操作并提供差异、钩子正反例和迁移前后逐 id 对账结果；本插件不代替采用项目做迁移决策。
 
-**执行层由采用项目自己接**，标准不发**生效的**钩子、流水线或 agent 侧配置——它们随宿主工具变，上游给一份就会过期成第二处权威；`templates/` 里的 agent、skill 文件是供复制的载体实例，拷进项目的 `.agents/` 之后才生效，由采用方自己决定。**唯一例外是插件自带的守卫**（DSH 的受控动作询问，见下节「DSH 接法」），依据是 D-108 登记行的修订句与 D-135（标准仓 `docs/决策日志.md`）。
+保持 Full access 时，官方 `0.2.0-rc.2` 文档提供的路径是：在正在运行并已登录的 DSH Web 侧栏 **Plugins** 启用 **Auto review**（默认关闭），在当前会话输入 `/permission` 查看可选项，在输入框旁权限选择器选 **Auto review (EXP)** 并确认风险提示；也支持用户显式输入 `/permission auto`。它组合 Full access + `ask`，**reviewer 的 `allow` 不覆盖下游决定**：下游 `ask` 仍走标准审批、须获有效批准；下游 `deny` 保持拒绝，不能靠人工应答改为放行；不在通用设置／未来会话默认值中。Auto 的进程内委派子会话固定 `never`，父会话切换不意味着已创建子会话获得审批。出处：[权限预设](https://unpkg.com/@deepseek-ai/dsh-permission-presets@0.2.0-rc.2/README.md)、[Auto review](https://unpkg.com/@deepseek-ai/dsh-experimental-auto-review@0.2.0-rc.2/README.md)。**当前部署是否加载 Auto、具体控件与这条路径的实际行为尚未实测**；以 `/permission` 列表和实际审批事件为准，不要求为此降到只读或工作区权限。
+
+**执行层由采用项目自己接**，标准不发**生效的**钩子、流水线或 agent 侧配置——它们随宿主工具变，上游给一份就会过期成第二处权威；`templates/` 里的 agent、skill 文件是供复制的载体实例，拷进项目的 `.agents/` 之后才生效，由采用方自己决定。插件的项目路径接入契约见下节「DSH 接法」。**发布与效力边界不在本轮改写**：D-108 登记行仍按旧交付面约定，D-137 的取代提议尚未生效（标准仓 `docs/决策日志.md`）；候选职责收缩不自动改变这些约定。
 `std-check` 判的是本标准要求的工件与结构，不是 [01 §5.6](../../标准/01-项目管理标准.md#gates) 的 G1–G8；测试、格式、依赖审计各按该节写执行点，可与它并列接进同一钩子。承载可以是版本控制钩子、流水线作业或按清单执行的人工步骤，语义相同。
 
-钩子盲区（都不记为已受控）：`--no-verify` 的提交（git 接受无歧义缩写如 `--no-veri`，`-n` 可并进组合短选项如 `-an`）、`git -c core.hooksPath=… commit` 临时换走钩子目录的提交、钩子文件失去执行权限后的提交（git 只打一行 hint 就跳过），以及 `git cherry-pick`、`git revert`、`git rebase` 与 fast-forward 的 `git merge` 写进分支的提交（这几类默认不运行 pre-commit 与 commit-msg，只有 `rebase -i` 的 reword 和冲突解决后的 `--continue`／`git commit` 会经过钩子）——这些按 [01 §5.6](../../标准/01-项目管理标准.md#gates) 记为该门未覆盖的范围。不建议为这些写法加宿主询问规则：git 选项的缩写与组合写不完，按命令字符串拦只能打地鼠；兜底靠 git 历史可查与非 fast-forward 合并、发布前的全量检查。非 fast-forward 的 `git merge` 可再接一个 `pre-merge-commit` 钩子（内容为 `exec "$(dirname "$0")/pre-commit"`）转调同一钩子覆盖。
+钩子盲区（都不记为已受控）：`--no-verify` 的提交（git 接受无歧义缩写如 `--no-veri`，`-n` 可并进组合短选项如 `-an`）、`git -c core.hooksPath=… commit` 临时换走钩子目录的提交、钩子文件失去执行权限后的提交（git 只打一行 hint 就跳过），以及 `git cherry-pick`、`git revert`、`git rebase` 与 fast-forward 的 `git merge` 写进分支的提交（这几类默认不运行 pre-commit 与 commit-msg，只有 `rebase -i` 的 reword 和冲突解决后的 `--continue`／`git commit` 会经过钩子）——这些按 [01 §5.6](../../标准/01-项目管理标准.md#gates) 记为该门未覆盖的范围。这些是 **Git 钩子的盲区**，本轮项目路径候选也不解析这些命令、不为跳钩子或 hooksPath 覆盖新增询问；旧安装的历史预过滤行为不是新版保障（见下节「覆盖与宿主限制」）。不为完全解析所有写法另造并行权限体系；兜底靠 git 历史可查与非 fast-forward 合并、发布前的全量检查。非 fast-forward 的 `git merge` 可再接一个 `pre-merge-commit` 钩子（内容为 `exec "$(dirname "$0")/pre-commit"`）转调同一钩子覆盖。
 
 把 2 当告警放行的流水线，其结论不得被引用为"检查过了"。agent 侧的执行点是宿主工具自己的权限规则与调用前钩子，按各工具自己的机制配；没配的按 [01 §5.5](../../标准/01-项目管理标准.md#controlled-actions) 记未定，不记为已受控。DSH 的接法见下节。
 
 ## DSH 接法
 
-**这是 DeepSeek Harness（DSH）一家的接法，是载体实例，不是标准正文。** 本仓只支持 DSH（D-135，标准仓 `docs/决策日志.md`），
-执行层是本插件的守卫（源码 `src/guard/`）：受控动作（[01 §5.5](../../标准/01-项目管理标准.md#controlled-actions)）
-与额外受保护的路径（插件挂载配置里的 `protect` 清单，缺省为空）都返回询问，由人看一眼批准或拒绝。本节只写它与 `std-check`、git 钩子的分工。
-**接之前先在项目根跑一次** `std-check .`，
-退出 0 再接提交钩子——否则接上即锁死这个项目的每一次提交。
+**这是 DSH 的载体实例，不是标准正文或授权。** 本轮 `policyVersion: 2` 是配置契约破坏性、未发布的职责收缩候选，源候选已编码并正常编译，本地回归、变异和真实 ASAR 隔离组合的配置挂载／工具审批接缝已通过独立核验；共享 profile 切换与实际文件沙箱不在此证据范围；共享 desktop 仍保留旧安装和原配置。package 暂为 0.1.0，**同号不能识别能力**：切换前核精确 commit、制品／tool-identity digest 与 policyVersion，不自动更新、重装或据文档推断运行中版本。
 
-- **分工**：插件在 agent 发起工具调用的当口收紧（问或拒）；`std-check` 在提交的当口判；git 钩子拦人手敲的提交。三层互补，各自的盲区按
-  [01 §5.6](../../标准/01-项目管理标准.md#gates) 记，不是二选一。
-- **提交前必过 `std-check`**：git `pre-commit` 钩子（见上节形态示意）是必经路径。DSH 一侧**不再另写**调用前钩子——
-  没有宿主钩子形态的第二处副本，少一处会过期的权威。插件的 `tools/pre-execute` 监听只做询问与只读，不替代 `std-check`。
-- **权限边界在 DSH 自己的两个旋钮上**：沙箱模式与审批策略（`ask`／`never`）。界面的四档是把两个旋钮捆在一起的“权限预设”：仅可查看＝read-only+`ask`、工作区内修改＝workspace-write+`ask`、完全权限＝danger-full-access+`never`、auto review＝Full access+`ask`（前三档在会话日志里见过，最后一档只见于 DSH 的说明、未实测）；界面里没有叫 `ask` 的选项。守卫的询问在会话日志里是一对 `approval/asked`（`reason` 即 `policy.ts` 的文案）与 `approval/decided`，可据此与沙箱提权（`escalate sandbox to …`）区分。插件的 `ask` 经 DSH 的审批通道，应答缺席、
-  被拒、取消一律是拒绝，这一点由 DSH 保证、不由本仓保证。`ctx.tools.restrict()` 是**可见性过滤，不是安全边界**
-  （标准仓 `docs/附录-载体实例/DSH载体映射.md` §5），不要拿它当权限用。
-- **入口里模型要看的字段写正文行，不放 YAML 头**：这条是此前在另一宿主上实测出来的（YAML 头整段不进模型上下文）；
-  DSH 的 `dsh-agent-instructions` 把入口文件原文作为持久基线消息注入，**读自包文档、未实机验证**，所以仍按
-  `templates/CONTEXT_MANIFEST.md` 把合同头写成标题下的一行正文——这样两种可能都不出错。
-- **入口文件名**：DSH 的 `dsh-agent-instructions` 默认读项目根到工作目录链上每一份 `AGENTS.md`；有 `maxBytes` 预算，超出时先整份丢更宽泛的文件、最后才截断最具体的，并发出具名的可见通知。
-  入口写成 `AGENTS.md`。预算默认值与是否被 profile 改过要自己核，别抄。
-- **恢复与压缩后的重读**：DSH 的压缩由 `dsh-compaction` 做，会话日志是权威。「压缩或恢复后先重读当前工作项」这条
-  **写进入口文件的加载合同**（[01 §4.2](../../标准/01-项目管理标准.md#session-protocol) 开工前八问②、
-  [03](../../标准/03-Agent信息获取与上下文管理.md) §8.2 重建后重核 HEAD），不另造会话启动钩子；
-  本仓未验证 DSH 有等价的「恢复后注入」事件，记未定。
+### 分工与显式配置
 
-**已验证**：守卫在隔离的 DSH profile 里经 `dsh plugin add` 从 git 地址装入后，按 DSH 自己的 `dsh-tool-skill` 工具表实机调用，守卫的返回值被 DSH 采纳（验证时守卫还有 deny 与 ask 两种，之后 deny 的两个来源——内嵌 `.std/` 只读——随该机制一并删除，现在只产出 ask 与 allow，设计 §12.38）；技能提供者在装入后注册并可按名加载（设计文档 §12.35、§12.36）。**真实会话里已验证**（2026-10-10 重启后，依据是会话事件日志 `approval/asked`／`approval/decided` 与 `skill` 工具调用，见设计 §12.43）：模型看到并加载了这些技能；守卫的询问在 `ask` 下被批准、在 `never` 下被拒。**仍未验证**（记未定，不折算为通过）：子代理会话是否也看到并能加载 `std-*` 技能；与同样订阅 `tools/pre-execute` 的其它包的先后顺序没有实测。
+标准技能与 `std-check` 仍由插件提供，提交钩子仍按项目自己的质量合同执行；它们不因路径层默认关闭而关闭。接提交钩子前先在项目根跑 `std-check .`、确认退出 0，避免一接入就锁住正常提交；这不授予路径层或发布权限。bundle 保持 `dsh-project-std` 与 `dsh-project-std-skills` 两个稳定 id；主插件默认 `enabled: false`、`policyVersion: 2`、`projects: []`，技能默认启用。无配置或 disabled 不挂路径监听，没有隐式 AGENTS、状态文件、钩子或插件源码保护。
 
-**盲区**（都不记为已受控，按 [01 §5.5](../../标准/01-项目管理标准.md#controlled-actions)）：
+需要路径人审时，由**用户／profile 维护方在正常配置通道**准备同 id 完整覆盖；以下只是候选示例，不是本轮写入真实 profile 的操作，也不授权 AI 改 profile：
 
-1. 命令串匹配只是预过滤：解释器子进程写受保护路径（如 `python -c "open(…, 'w')"`）、git 别名、拼接或编码后的命令，写入当时不拦；改的是已跟踪文件，提交时被 `std-check` 拦下；新建的未跟踪文件 `std-check` 不看。
-2. `ask` 按命令字符串匹配，分不出读写：`git tag` 只列标签也会被问（列标签改用 `git show-ref --tags`）。
-3. 同一条命令里先改受保护路径再提交：判定在整条命令之前做，看不见之后才发生的改动。
-4. `tools/pre-execute` **不能改写参数**（dsh-tools README「Known Limitations」）：只能放行、问或拒。
-5. 不经 DSH 的提交：人在终端手敲、IDE 里点的提交——只剩 git `pre-commit` 钩子。
-6. **免审批清单**：DSH 的审批策略是会话级旋钮（`ask`／`never`），没有“逐条放行通配规则”的项目级文件，本仓没有等价对象可读，也就没有对应的判据。
+```yaml
+- id: dsh-project-std
+  name: dsh-project-std
+  config:
+    enabled: true
+    policyVersion: 2
+    projects:
+      - root: 'D:\Programs\example-project'
+        protect: ['AGENTS.md', 'CONTEXT_MANIFEST.md', '.githooks']
+```
 
-DSH 一手出处与版本记在设计文档 [重构设计-TS插件化](../../docs/重构设计-TS插件化.md) 的各节，本节不重抄。
+- 顶层只允许 `enabled`／`policyVersion`／`projects`，项目项只允许 `root`／`protect`；未知键报错，不先投影丢键。`enabled` 必须为布尔值，true 须显式版本 2 及非空项目清单。
+- root 须是**当前平台完全限定路径**：Windows 盘符后有根分隔符或完整 UNC server/share，POSIX 以 `/` 起。相对 root、`C:foo`、单根分隔符、残缺 UNC 均拒收；重复、等价或父子重叠 roots 报错，不静默取一项。
+- protect 是非空相对路径数组，原形及规整后都不得有空项／空段／`.`／`..`／绝对或根路径；不是 glob。Windows 大小写、段尾点空格、长路径前缀与 ADS 只做声明的词法比较，不证明真实路径隔离。
+- 仅会话 cwd 完全限定且位于已登记 root 时应用该项目；相对 `file_path` 按**会话 cwd**解析，不按 root 或进程 cwd 猜。只消费 `write`／`edit` 的结构化路径：等于 protect 或其子路径才 ask，前缀相似不匹配。不相关 cwd、真正越 root 或其它工具原样下游，不跨项目自动套另一项目规则。已启用项目配置但缺有效 cwd，或受管调用路径缺失／空白／类型错误／依赖环境时 ask 说明无法定位；普通相对目标的 `..` 按已确认 cwd 规整。
+- 插件先取 `next()`，无本地要求即原样返回；下游 ask／deny／cancel 原样保留，异常传播，**只有下游 allow 才可加入本地 ask**。插件不解释已有批准、不存 grant、不按审批模式自行放行，不做通用风险评分或全局严重度合并。
+
+### 升级与回退
+
+旧主配置顶层 `root`／`protect` 即使为空，或 enabled=true 缺新清单，都明确报迁移错误；旧键仅保留作检测，不能自动清空、过滤或转成默认关闭。schema 与 apply 对完整输入校验；**插件挂载报错不等于工具失败关闭**，宿主若仍运行工具，不能称保护仍在。
+
+因此维护方须先保留原精确包／锁定身份与完整配置，逐项确认原约束、退出覆盖面和新 protect 的选择，再在正常可审批环境验证 schema／挂载、真实结构化写改命中及更严下游保留，之后才切换。失败经宿主正常通道退回原精确包与原配置；不能用相同版本号找回能力，不能借升级重发此前被拒动作。本轮未执行这条升级链。
+
+状态工件的日常更新政策仍属项目；把状态文件加入 protect 会使其所有结构化 write/edit 均要求询问，不能等价表达“只防删除或清空”。**由项目负责人选择是否纳入**，不默认加入、不自动替项目决定规则。
+
+### 覆盖与宿主限制
+
+1. 新层只提出显式项目的结构化路径人审要求，**不解析或新增 Shell/Git 询问**。强推、标签、跳钩子、hooksPath、shell 清空状态、解释器／直接 Node／外部编辑及其它工具未由本层保护；项目原有人审意图不因此取消，仍按有效规则与正常用户授权处理，缺执行点记未定。不要换命令或工具绕过旧安装已拒绝的调用。
+2. 这不是文件沙箱、目标侧权限、realpath 或 symlink 防护；cwd/root 的词法范围也不证明跨项目写入被阻止。`std-check` 与钩子只查各自声明的输入：本仓查工作区而非暂存树，未跟踪文件不参与，跳钩子和历史坏内容不保证检出；未接入的 CI 不写成已受控。
+3. 沙箱与审批归 DSH。**Full access + never 无文件沙箱，也没有 Auto 通用风险评审**；收到的 ask 自动拒绝，不证明所有风险都被分类。Auto 是可选实验能力，正常入口与子会话限制见「迁移与工具审批」；direct Node 与 PTC outer program 不受 inner review 全覆盖。删除旧启发式不是风险等价迁到宿主，不另造审批、grant 或并行权限体系。
+4. 标准 ask 输送／应答缺席与取消的执行结果由宿主负责。`the user rejected tool` 不能单独证明人工点了拒绝；逐调用核 asked.reason、callId、decided.outcome 与有效策略。诊断问题仍是上游交接材料，**本仓未改宿主实现**。`ctx.tools.restrict()` 是可见性过滤，不是安全边界。
+
+**历史证据与当前未定**：DSH 0.2.0-rc.2 上旧版本的隔离安装、技能注册以及 2026-10-10 重启后真实会话询问采纳，保留在标准仓历史设计 `docs/重构设计-TS插件化.md` §12.35／12.36／12.43；未发布旧守卫候选的修复／失败记录保存在源主仓本机冻结回执，不纳入本提交切片，不作为现行使用指导。既有 migrate 修复的提交验收见标准仓 `docs/审计记录/2026-10-11-migrate提交验收.md`，不证明本轮路径层；本切片不纳入其后独立安装续验记录。新配置加载、路径层行为与下游 listener 决定保留已在真实 ASAR 隔离组合中核验；该组合使用 Map-only 工具与最小 session carrier，不证明正常 profile 换装、真实文件工具、完整子会话或模型回合。上述完整集成仍未验收，不能将隔离组合或历史 PASS 折为新候选已安装启用。入口、合同格式及恢复接法仍看标准仓 `docs/附录-载体实例/DSH载体映射.md` 和 [03 §8](../../标准/03-Agent信息获取与上下文管理.md#recovery)，本节不复制宿主应用说明。
 
 ## 加一个自己的检查器
 
