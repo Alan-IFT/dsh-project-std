@@ -249,13 +249,13 @@ test('str_replace_editor is a blacklist: only view passes; unknown/missing/non-s
   assert.equal((await run({command:'write_file',path:'src/app.ts'})).kind,'allow')
   assert.equal((await run({path:'src/app.ts'})).kind,'allow')
 })
-test('Config schema export: fallback only when schemastery is absent; validateConfig behaviour unchanged',async()=>{
+test('Config schema export: unusable schemastery only omits mount-time schema; validateConfig behaviour unchanged',async()=>{
   const mod=await import('../lib/config_plugin.js')
   assert.ok(mod.Config===undefined||typeof mod.Config==='object'||typeof mod.Config==='function')
   assert.deepEqual(validateConfig({enabled:false}),{enabled:false,protectNativeEdits:false})
   assert.throws(()=>validateConfig({extra:1}),/未知 config/)
 })
-test('buildConfig: unresolvable schemastery falls back; resolvable but broken package throws (real createRequire)',async()=>{
+test('buildConfig: any unusable schemastery omits the mount-time schema instead of breaking the entry (real createRequire)',async()=>{
   const { buildConfig }=await import('../lib/config_plugin.js')
   const { mkdtempSync, mkdirSync, writeFileSync, rmSync }=await import('node:fs')
   const { tmpdir }=await import('node:os')
@@ -265,11 +265,10 @@ test('buildConfig: unresolvable schemastery falls back; resolvable but broken pa
   try {
     const project=(name,index)=>{const root=join(dir,name),pkg=join(root,'node_modules','@deepseek-ai','schemastery');writeFileSync(join(mkdirSync(root,{recursive:true})??root,'package.json'),'{"type":"commonjs"}');if(index!==undefined){mkdirSync(pkg,{recursive:true});writeFileSync(join(pkg,'package.json'),'{"name":"@deepseek-ai/schemastery","main":"index.js"}');writeFileSync(join(pkg,'index.js'),index)}return createRequire(join(root,'entry.cjs'))}
     assert.equal(buildConfig(project('absent')),undefined)
-    assert.throws(()=>buildConfig(project('broken',"require('@deepseek-ai/schemastery/lib/core')\n")),e=>e.code==='MODULE_NOT_FOUND')
+    // 导入期抛错会让整个 /config 条目无法激活，而 apply 内无条件校验才是安全依据，因此损坏的包也只省略 schema。
+    assert.equal(buildConfig(project('broken',"require('@deepseek-ai/schemastery/lib/core')\n")),undefined)
     const ok=buildConfig(project('ok',"module.exports={any:()=>({}),transform:(s,f)=>({validator:f})}\n"))
     assert.equal(ok.validator,validateConfig)
-    // Pinned current behaviour (CONTRACT §10): an installed package whose entry file is missing is unresolvable and
-    // omits the mount-time schema; a loadable package of the wrong shape also omits it. apply() still validates.
     const missingMain=project('missing-main','')
     writeFileSync(join(dir,'missing-main','node_modules','@deepseek-ai','schemastery','package.json'),'{"name":"@deepseek-ai/schemastery","main":"dist/index.js"}')
     rmSync(join(dir,'missing-main','node_modules','@deepseek-ai','schemastery','index.js'))

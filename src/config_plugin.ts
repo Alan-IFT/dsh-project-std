@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
-import { defineTool, type PreToolDecision, type ToolExecution } from '@deepseek-ai/dsh-tools'
+import type { ParameterJsonSchema, PreToolDecision, ToolDefinition, ToolExecution } from '@deepseek-ai/dsh-tools'
 import type { Context } from '@deepseek-ai/cordis'
 import { assertText, invalidReview, REASON_MAX_BYTES, reviewText, type Review } from './config-governance.js'
 import { artifacts, checked, conflict, CONFIG_PATHS, cwdOf, EXCEPTION_PATH, lexicalManaged, projectEntry, snapshot, snapshotDrift, type GovernanceFs } from './config-host.js'
@@ -16,16 +16,19 @@ export function validateConfig(value?: unknown): ConfigPluginOptions {
   for (const key of ['enabled', 'protectNativeEdits']) if (Object.hasOwn(raw, key) && typeof raw[key] !== 'boolean') throw new Error(`${key} 必须是布尔值`)
   return { enabled: raw.enabled === undefined ? true : raw.enabled as boolean, protectNativeEdits: raw.protectNativeEdits === undefined ? false : raw.protectNativeEdits as boolean }
 }
-/** Only an unresolvable schemastery falls back (apply() still validates); a resolvable but broken package surfaces its load error. */
+/**
+ * 宿主 schema 是可选模块：任何不可用情形（缺失、解析或加载失败、形状不符）都省略挂载期 schema。
+ * 导入期抛错会让整个 /config 条目无法激活，而安全判定不依赖它——apply 内无条件校验。
+ * 已安装插件的 node_modules 里没有宿主包，因此这里只能用 createRequire 动态探测，不能静态导入；与 guard 入口同一取舍。
+ */
 export function buildConfig(require: NodeJS.Require = createRequire(import.meta.url)): unknown {
-  try { require.resolve('@deepseek-ai/schemastery') } catch (e) {
-    if ((e as NodeJS.ErrnoException)?.code === 'MODULE_NOT_FOUND') return undefined
-    throw e
-  }
-  const module = require('@deepseek-ai/schemastery')
-  const Schema = module?.default ?? module
-  if (typeof Schema?.any !== 'function' || typeof Schema?.transform !== 'function') return undefined
-  return Schema.transform(Schema.any(), validateConfig)
+  try {
+    require.resolve('@deepseek-ai/schemastery')
+    const module = require('@deepseek-ai/schemastery')
+    const Schema = module?.default ?? module
+    if (typeof Schema?.any !== 'function' || typeof Schema?.transform !== 'function') return undefined
+    return Schema.transform(Schema.any(), validateConfig)
+  } catch { return undefined }
 }
 export const Config = buildConfig()
 interface Approval { request(input: { agent: NonNullable<ToolExecution['agent']>; toolName: string; callId: ToolExecution['callId']; reason: string; signal: AbortSignal }): Promise<unknown> }
@@ -34,17 +37,25 @@ interface SandboxPolicy { resolve(input: { session: NonNullable<ToolExecution['a
 interface Services { get(key: string): unknown; emit(event: string, ...args: unknown[]): unknown }
 const services = (ctx: Context): Services => ctx as unknown as Services
 function get<T>(ctx: Context, key: string): T | undefined { return services(ctx).get(key) as T | undefined }
-const parameters = {
-  action: { type: 'string', enum: ['inspect', 'review', 'apply'], required: true },
-  target: { type: 'string', enum: ['project', 'exceptions'] },
-  content: { type: 'string' },
-  before_sha256: { oneOf: [{ type: 'string' }, { type: 'null' }] },
-  after_sha256: { type: 'string' },
-} as const
+/**
+ * 模型侧参数 JSON Schema：宿主 defineTool 编译出的就是这个形状（隐式开放根，不写 additionalProperties）。
+ * 参数从严拒收由 execute 内的 argsOf 承担。
+ */
+const PARAMETERS = {
+  type: 'object',
+  properties: {
+    action: { type: 'string', enum: ['inspect', 'review', 'apply'], description: 'inspect 只读事实；review 只读审阅；apply 受控写入' },
+    target: { type: 'string', enum: ['project', 'exceptions'], description: '默认 project' },
+    content: { type: 'string', description: 'review／apply 的完整替换原文' },
+    before_sha256: { oneOf: [{ type: 'string' }, { type: 'null' }], description: 'apply 必填；缺文件用 null' },
+    after_sha256: { type: 'string', description: 'apply 必填，取自 review 返回' },
+  },
+  required: ['action'],
+} satisfies ParameterJsonSchema
 function argsOf(raw: unknown): { action: 'inspect' | 'review' | 'apply'; target: 'project' | 'exceptions'; content?: string; before?: string | null; after?: string } {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('参数须是对象')
   const a = raw as Record<string, unknown>
-  for (const k of Object.keys(a)) if (!Object.hasOwn(parameters, k)) throw new Error(`不支持参数 ${k}；root／批准／权限不能由模型指定`)
+  for (const k of Object.keys(a)) if (!Object.hasOwn(PARAMETERS.properties, k)) throw new Error(`不支持参数 ${k}；root／批准／权限不能由模型指定`)
   if (a.action !== 'inspect' && a.action !== 'review' && a.action !== 'apply') throw new Error('未知 action')
   if (a.target !== undefined && a.target !== 'project' && a.target !== 'exceptions') throw new Error('未知 target')
   if (a.action === 'inspect' && ['content', 'before_sha256', 'after_sha256'].some(k => Object.hasOwn(a, k))) throw new Error('inspect 不接受提案或 hash')
@@ -63,9 +74,11 @@ export function apply(ctx: Context, raw?: unknown): void {
   const fs = get<GovernanceFs>(ctx, 'fs')
   if (!fs || ['resolve', 'stat', 'lstat', 'contains', 'readBytes', 'writeText'].some(k => typeof (fs as unknown as Record<string, unknown>)[k] !== 'function')) throw new Error('config 缺必需 fs 服务／契约')
   if (!ctx.tools || typeof ctx.tools.register !== 'function') throw new Error('config 缺必需 tools 服务')
-  const definition = defineTool({
+  // 注册就绪的定义由本模块直接产出：宿主的 defineTool 属于宿主包，已安装插件无法解析它。
+  // 参数校验由 execute 内的 argsOf 承担（宿主 register 只校验 output.schema 与 render）。
+  const definition: ToolDefinition = {
     name: 'std_config', description: 'Inspect governance facts, review proposed content, or apply one validated file using current session authority. No root/approved/permission parameters.',
-    parameters,
+    parameters: PARAMETERS,
     output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }] },
     async execute(rawArgs, exec) {
       const args = argsOf(rawArgs)
@@ -115,7 +128,7 @@ export function apply(ctx: Context, raw?: unknown): void {
       services(ctx).emit('fs/observed', current.target, { kind: 'present', version: outcome.version }, exec)
       return jsonObject({ applied: true, root: initial.cwd, path: current.path, sha256: review.afterSha256, version: outcome.version, review })
     },
-  })
+  }
   ctx.tools.register(definition)
   if (opts.protectNativeEdits) ctx.on('tools/pre-execute', async (exec: ToolExecution, next: () => Promise<PreToolDecision>): Promise<PreToolDecision> => {
     const downstream = await next()
