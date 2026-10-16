@@ -37,6 +37,20 @@ function harness(options={}) {
   const proposal=(text=relaxed)=>({action:'apply',content:text,before_sha256:options.missing?null:sha256(before),after_sha256:sha256(text)})
   return {entries,effects,events,listeners,exec,controller,fs,put,call,proposal,definition,setApproval(v){approval=v},setPolicy(v){policy=v},setRead(v){onRead=v},setResolve(v){onResolve=v},setStat(v){onStat=v}}
 }
+test('each registration keeps its own parameters and reject boundary (clone or freeze both satisfy)',async()=>{
+  const a=harness(), b=harness()
+  const before=JSON.stringify(b.definition.parameters)
+  // 旧 defineTool 每次产出新对象。这里只断言行为，不锁定实现：深克隆与「冻结共享模板」都满足。
+  try {
+    a.definition.parameters.properties.root={type:'string'}
+    a.definition.parameters.required.push('root')
+  } catch { /* 冻结实现会抛 TypeError，同样满足不变量 */ }
+  assert.equal(JSON.stringify(b.definition.parameters),before)
+  assert.deepEqual(b.definition.parameters.required,['action'])
+  // 白名单必须与交给宿主的对象解耦：改过 a 的 schema 也不能让 root 溜过拒收。
+  await assert.rejects(b.call({action:'inspect',root:'.'}),/不支持参数 root/)
+  await assert.rejects(a.call({action:'inspect',root:'.'}),/不支持参数 root/)
+})
 test('real defineTool registers with actual module DSL; nullable before SHA and open output',()=>{
   assert.deepEqual(inject,['tools','fs'])
   const h=harness(); assert.equal(h.definition.name,'std_config')

@@ -19,7 +19,8 @@ export function validateConfig(value?: unknown): ConfigPluginOptions {
 /**
  * 宿主 schema 是可选模块：任何不可用情形（缺失、解析或加载失败、形状不符）都省略挂载期 schema。
  * 导入期抛错会让整个 /config 条目无法激活，而安全判定不依赖它——apply 内无条件校验。
- * 已安装插件的 node_modules 里没有宿主包，因此这里只能用 createRequire 动态探测，不能静态导入；与 guard 入口同一取舍。
+ * 它是可选能力、不保证在位（可能由别的插件带来，也可能一个都没有），所以只能动态探测；
+ * 而运行时服务包（如 dsh-tools）在真机 profile 的 node_modules 里并不存在，静态导入会让条目直接导入失败。
  */
 export function buildConfig(require: NodeJS.Require = createRequire(import.meta.url)): unknown {
   try {
@@ -39,7 +40,7 @@ const services = (ctx: Context): Services => ctx as unknown as Services
 function get<T>(ctx: Context, key: string): T | undefined { return services(ctx).get(key) as T | undefined }
 /**
  * 模型侧参数 JSON Schema：宿主 defineTool 编译出的就是这个形状（隐式开放根，不写 additionalProperties）。
- * 参数从严拒收由 execute 内的 argsOf 承担。
+ * 参数从严拒收由 execute 内的 argsOf 承担，用独立键集，绝不复用交给宿主的那个对象。
  */
 const PARAMETERS = {
   type: 'object',
@@ -52,10 +53,11 @@ const PARAMETERS = {
   },
   required: ['action'],
 } satisfies ParameterJsonSchema
+const PARAM_KEYS = new Set(Object.keys(PARAMETERS.properties))
 function argsOf(raw: unknown): { action: 'inspect' | 'review' | 'apply'; target: 'project' | 'exceptions'; content?: string; before?: string | null; after?: string } {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('参数须是对象')
   const a = raw as Record<string, unknown>
-  for (const k of Object.keys(a)) if (!Object.hasOwn(PARAMETERS.properties, k)) throw new Error(`不支持参数 ${k}；root／批准／权限不能由模型指定`)
+  for (const k of Object.keys(a)) if (!PARAM_KEYS.has(k)) throw new Error(`不支持参数 ${k}；root／批准／权限不能由模型指定`)
   if (a.action !== 'inspect' && a.action !== 'review' && a.action !== 'apply') throw new Error('未知 action')
   if (a.target !== undefined && a.target !== 'project' && a.target !== 'exceptions') throw new Error('未知 target')
   if (a.action === 'inspect' && ['content', 'before_sha256', 'after_sha256'].some(k => Object.hasOwn(a, k))) throw new Error('inspect 不接受提案或 hash')
@@ -78,7 +80,8 @@ export function apply(ctx: Context, raw?: unknown): void {
   // 参数校验由 execute 内的 argsOf 承担（宿主 register 只校验 output.schema 与 render）。
   const definition: ToolDefinition = {
     name: 'std_config', description: 'Inspect governance facts, review proposed content, or apply one validated file using current session authority. No root/approved/permission parameters.',
-    parameters: PARAMETERS,
+    // 每个注册实例拿自己的副本：旧 defineTool 每次也产出新对象，不把模块级模板交给宿主后可被改动。
+    parameters: structuredClone(PARAMETERS),
     output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }] },
     async execute(rawArgs, exec) {
       const args = argsOf(rawArgs)

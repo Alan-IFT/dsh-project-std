@@ -9,7 +9,8 @@ export declare function validateConfig(value?: unknown): ConfigPluginOptions;
 /**
  * 宿主 schema 是可选模块：任何不可用情形（缺失、解析或加载失败、形状不符）都省略挂载期 schema。
  * 导入期抛错会让整个 /config 条目无法激活，而安全判定不依赖它——apply 内无条件校验。
- * 已安装插件的 node_modules 里没有宿主包，因此这里只能用 createRequire 动态探测，不能静态导入；与 guard 入口同一取舍。
+ * 它是可选能力、不保证在位（可能由别的插件带来，也可能一个都没有），所以只能动态探测；
+ * 而运行时服务包（如 dsh-tools）在真机 profile 的 node_modules 里并不存在，静态导入会让条目直接导入失败。
  */
 export declare function buildConfig(require?: NodeJS.Require): unknown;
 export declare const Config: unknown;
