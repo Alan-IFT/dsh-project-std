@@ -231,36 +231,35 @@ function numKinds(text: string): NumKinds {
 }
 
 /** 读并解析一份配置。返回 [cfg, problem]；报错只给路径与行号，不回显文件内容。 */
-function readConfig(p: string, shown: string): [Config, Problem | null] {
-  let text: string
+export function validateConfigText(text: string, shown = '候选配置'): [Config, Problem | null] {
   let cfg: YamlValue
-  try {
-    const raw = readBytes(p)
-    const bad = firstInvalidUtf8(raw)
-    if (bad >= 0) return [{}, `${shown} 不是 UTF-8 编码（第 ${bad} 字节起解不开）；本工具只读 UTF-8`]
-    // utf-8-sig：只去**一个**开头的 BOM；带 BOM 的首键不许读成 \ufefftier
-    const body = raw.length >= 3 && raw[0] === 0xef && raw[1] === 0xbb && raw[2] === 0xbf ? raw.subarray(3) : raw
-    text = new TextDecoder('utf-8', { fatal: false, ignoreBOM: true }).decode(body)
-    cfg = parseYamlSubset(text)
-  } catch (e) {
+  try { cfg = parseYamlSubset(text) } catch (e) {
     if (e instanceof ConfigError) return [{}, `${shown} 无法无歧义解析：${e.message}`]
-    // Python 只捕获 OSError：读不了（不存在、权限、超限、非常规文件、出仓）都是 OSError 子类。别的异常（程序错误）不吞，向外抛——
-    // 吞掉会把「检查器自己坏了」伪装成「配置读不了」，记成对象的未定。本模块的拒读类与带 errno `code` 的 Node 系统错误才算 OSError。
-    if (isReadRefusal(e) || typeof (e as NodeJS.ErrnoException).code === 'string') return [{}, `${shown} 读不了：${errName(e)}`]
     throw e
   }
   if (cfg === null || typeof cfg !== 'object' || Array.isArray(cfg)) return [{}, `${shown} 的顶层不是映射`]
   const injected = Object.keys(cfg).filter((k) => k.startsWith('_')).sort()
-  if (injected.length) {
-    // 下划线键是代码注入口（契约 §4），写进配置等于让被检查方指定检查范围
-    return [{}, `${shown} 第 ${keyLine(text, injected[0]!)} 行的顶层键以 _ 开头；这类键只由代码注入，项目配置写了整份拒收`]
-  }
+  if (injected.length) return [{}, `${shown} 第 ${keyLine(text, injected[0]!)} 行的顶层键以 _ 开头；这类键只由代码注入，项目配置写了整份拒收`]
   const c = cfg as Config
   const badBudget = badShape(c, text) ?? badDupBudgets(c, text, numKinds(text)) ?? badStateWords(c, text) ?? badMetadataRequired(c, text)
   if (badBudget) return [{}, `${shown} 无法无歧义解析：${badBudget}`]
   const bad = escapingPaths(c)
   if (bad.length) return [{}, `${shown} 里 ${bad.join('、')} 的路径含 .. 段或是绝对路径，指向项目之外；本工具只读被扫项目之内的文件`]
   return [c, null]
+}
+
+function readConfig(p: string, shown: string): [Config, Problem | null] {
+  try {
+    const raw = readBytes(p)
+    const bad = firstInvalidUtf8(raw)
+    if (bad >= 0) return [{}, `${shown} 不是 UTF-8 编码（第 ${bad} 字节起解不开）；本工具只读 UTF-8`]
+    const body = raw.length >= 3 && raw[0] === 0xef && raw[1] === 0xbb && raw[2] === 0xbf ? raw.subarray(3) : raw
+    const text = new TextDecoder('utf-8', { fatal: false, ignoreBOM: true }).decode(body)
+    return validateConfigText(text, shown)
+  } catch (e) {
+    if (isReadRefusal(e) || typeof (e as NodeJS.ErrnoException).code === 'string') return [{}, `${shown} 读不了：${errName(e)}`]
+    throw e
+  }
 }
 
 /** 与 Python `type(exc).__name__` 同口径：文件不存在是 FileNotFoundError、权限是 PermissionError、本模块的拒读类按各自的名字。 */

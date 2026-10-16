@@ -1,4 +1,4 @@
-# 同包两个稳定 id；覆盖 config 时须写全。主插件默认不登记项目、不挂路径监听。
+# 同包三个稳定 id；覆盖 config 时须写全。主插件默认不登记项目、不挂路径监听。
 - insert:
     - id: dsh-project-std
       name: dsh-project-std
@@ -6,6 +6,11 @@
         enabled: false
         policyVersion: 2
         projects: []
+    - id: dsh-project-std-config
+      name: dsh-project-std/config
+      config:
+        enabled: true
+        protectNativeEdits: false
     - id: dsh-project-std-skills
       name: dsh-project-std/skills
       config:

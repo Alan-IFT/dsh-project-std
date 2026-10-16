@@ -133,7 +133,7 @@ test('技能子插件 apply：注册提供者；enabled:false 什么也不做；
   assert.ok(logs.some(([k, m]) => k === 'warn' && m.includes('没有可用的 skills 服务')))
 })
 
-test('接线：cordis.patch.yml 把同一个包挂成两行（守卫 dsh-project-std 与技能 dsh-project-std/skills）；package.json 的 exports 有 ./skills 且指向 lib/skills_plugin.js', () => {
+test('接线：三入口 bundle 保留守卫与技能两条接线；package.json 的 exports 有 ./skills 且指向 lib/skills_plugin.js', () => {
   const y = readFileSync(join(root, 'cordis.patch.yml'), 'utf8')
   assert.match(y, /- id: dsh-project-std\n\s+name: dsh-project-std\n/); assert.match(y, /- id: dsh-project-std-skills\n\s+name: dsh-project-std\/skills\n/)
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
@@ -173,7 +173,7 @@ test('package.json：files 白名单含 skills；bin 含 std-check；装到的�
 const statLike = (f) => f.endsWith('.md') || f === 'index.json'
 const WIN_ROOT = () => process.platform === 'win32' ? 'D:\\skills-fixture' : '/skills-fixture'
 
-test('默认接线：主入口 disabled/v2/空项目不挂监听，技能仍启用且稳定两 id', () => {
+test('默认接线：主入口 disabled/v2/空项目不挂监听，技能及配置独立启用且稳定三 id', () => {
   const events = []
   guardPlugin.apply({ on: (event) => events.push(event) })
   assert.deepEqual(events, [])
@@ -181,5 +181,10 @@ test('默认接线：主入口 disabled/v2/空项目不挂监听，技能仍启�
   const [main, skills] = y.split('    - id: dsh-project-std-skills')
   assert.match(main, /enabled: false/); assert.match(main, /policyVersion: 2/); assert.match(main, /projects: \[\]/)
   assert.match(skills, /enabled: true/)
-  assert.equal((y.match(/    - id:/g) || []).length, 2)
+  assert.match(y, /- id: dsh-project-std-config\r?\n\s+name: dsh-project-std\/config\r?\n\s+config:\r?\n\s+enabled: true\r?\n\s+protectNativeEdits: false/)
+  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+  assert.equal(pkg.exports['./config'].default, './lib/config_plugin.js')
+  assert.equal(pkg.exports['./config'].types, './lib/config_plugin.d.ts')
+  assert.ok(existsSync(join(root, 'lib', 'config_plugin.js')))
+  assert.equal((y.match(/    - id:/g) || []).length, 3)
 })

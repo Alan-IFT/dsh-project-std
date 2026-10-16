@@ -5,6 +5,41 @@
 
 本工具是 TypeScript 写的 DeepSeek Harness（DSH）插件 `dsh-project-std` 的一部分，运行时只有 Node（DSH 自带的那份），**不依赖 Python，也不要求项目内嵌任何标准副本**。
 
+## 配置治理
+
+`std_config`（`dsh-project-std/config`）是**未安装／未发布候选**，当前共享 Desktop 是已验收的 a035 固定安装、旧路径 guard 默认关闭，不会随此树源码变化。新 bundle 配置入口默认启用，原生编辑保护 `protectNativeEdits:false`；完整接口与限制见 [CONTRACT §10](CONTRACT.md#10-配置治理候选接口)。这不是任意仓库写工具，只认当前 agent/session 的 cwd 及固定治理路径。
+
+在已挂载候选且 tools/fs 注入齐全的独立验证环境，模型从一开始使用专用入口（以下为工具参数，不是 Shell 命令）：
+
+```json
+{"action":"inspect"}
+```
+
+读取返回的原始配置、hash、validation 及有限工件候选来源；存在不代表角色正确。模型结合项目事实准备**完整替换**文本，例如将已明示的预算从 150 收紧为 140：
+
+```json
+{"action":"review","content":"budgets:\n  entry_lines: 140\n"}
+```
+
+再用相同 content 和实际 review 返回的 before/after SHA 调用。下面是**仅当旧原文逐字等于 `budgets:\n  entry_lines: 150\n`**时可直接执行的参数；真实项目必须使用自己的 review 结果，首次缺文件 before 明确写 JSON null：
+
+```json
+{"action":"apply","content":"budgets:\n  entry_lines: 140\n","before_sha256":"dd705796020c333fd16184b592dc51404129698f68a45c28cf223352025445ef","after_sha256":"fc17311ff1774cbf4008bb3604787b7b13c2e6f658506c037b799695d09982be"}
+```
+
+不应为了示例删掉现有其它配置字段；模型应保留完整实际配置。明确收紧／等价不新增审批询问；放宽、未知或首次创建必须取得宿主本次 `allowed-once`，不能传 approved/root/权限字段。例外用三个动作中的同一 `target:"exceptions"`，文本任何变化均送审。无效既有配置、双候选（包括目录／链接占位）拒绝 apply，先由人确认权威；缺 governance 父目录不自动创建。
+
+CLI 是单独只读入口，允许明确指定根外候选（不是项目扫描树），不安装也可从当前编译树运行：
+
+```text
+node lib/cli.js config-review D:\projects\example --candidate D:\proposals\project.yaml --json
+node lib/cli.js config-review D:\projects\example --candidate D:\proposals\exceptions.md --target exceptions
+```
+
+装有相同候选 CLI 的环境可将 `node lib/cli.js` 换成 `std-check`。退出 0 仅表示有效 review 已输出，**不是批准或应用**；无效／错误退出 2。此子命令不接收 --config/--apply/--approved；旧 check/migrate 不接收 --candidate/--target。
+
+可选原生保护由 profile 维护方通过正常宿主配置将第三稳定 id `dsh-project-std-config` 的 `protectNativeEdits` 设 true，不能在 project.yaml 自行关闭。仅拒当前根固定文件的已知 write/edit 及 str_replace_editor 变更命令，read/view 不拦；Shell、外部写者不覆盖。**原工具已拒后停止，禁止自动改走专用工具重试**。本轮不改真实 profile、不安装候选；隔离真实宿主组合已验审批、沙箱与原生保护管线，范围与未覆盖项见设计文档「验收结果」，不等于真实 profile 已安装或人类 UI 已验证。
+
 ## 一条命令
 
 在被扫描的项目根执行：`std-check .`（插件包 `bin` 提供；钩子里怎么找到它见下文「提交钩子」）。
@@ -144,11 +179,11 @@
 
 ## DSH 接法
 
-**这是 DSH 的载体实例，不是标准正文或授权。** 本轮 `policyVersion: 2` 是配置契约破坏性、未发布的职责收缩候选，源候选已编码并正常编译，本地回归、变异和真实 ASAR 隔离组合的配置挂载／工具审批接缝已通过独立核验；共享 profile 切换与实际文件沙箱不在此证据范围；共享 desktop 仍保留旧安装和原配置。package 暂为 0.1.0，**同号不能识别能力**：切换前核精确 commit、制品／tool-identity digest 与 policyVersion，不自动更新、重装或据文档推断运行中版本。
+**这是 DSH 的载体实例，不是标准正文或授权。** `policyVersion: 2` 路径职责收缩已随已验收的 a035 固定包经用户正常入口安装；重启后的技能调用、包身份与默认关闭配置已有证据，不等于路径保护已启用。配置治理是本树新增的已验收但未安装／未发布能力，隔离宿主证据与限制见设计文档「验收结果」。package 暂为 0.1.0，**同号不能识别能力**：切换前核精确 commit、制品／tool-identity digest 与 policyVersion，不自动更新、重装或据文档推断运行中版本。
 
 ### 分工与显式配置
 
-标准技能与 `std-check` 仍由插件提供，提交钩子仍按项目自己的质量合同执行；它们不因路径层默认关闭而关闭。接提交钩子前先在项目根跑 `std-check .`、确认退出 0，避免一接入就锁住正常提交；这不授予路径层或发布权限。bundle 保持 `dsh-project-std` 与 `dsh-project-std-skills` 两个稳定 id；主插件默认 `enabled: false`、`policyVersion: 2`、`projects: []`，技能默认启用。无配置或 disabled 不挂路径监听，没有隐式 AGENTS、状态文件、钩子或插件源码保护。
+标准技能与 `std-check` 仍由插件提供，提交钩子仍按项目自己的质量合同执行；它们不因路径层默认关闭而关闭。接提交钩子前先在项目根跑 `std-check .`、确认退出 0，避免一接入就锁住正常提交；这不授予路径层或发布权限。本候选 bundle 保留 `dsh-project-std` 与 `dsh-project-std-skills`，新增第三稳定 id `dsh-project-std-config`；主插件默认 `enabled: false`、`policyVersion: 2`、`projects: []`，技能和配置入口默认启用，原生治理编辑保护默认关闭。无配置或 disabled 不挂路径监听，没有隐式 AGENTS、状态文件、钩子或插件源码保护。
 
 需要路径人审时，由**用户／profile 维护方在正常配置通道**准备同 id 完整覆盖；以下只是候选示例，不是本轮写入真实 profile 的操作，也不授权 AI 改 profile：
 

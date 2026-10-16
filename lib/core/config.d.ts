@@ -5,6 +5,8 @@ type Problem = string;
 export declare function metadataPrefixes(v: readonly unknown[]): [string[], string[]];
 /** rel 是否在项目声明的 metadata_required 之内；全仓只此一处判定（D-133）。未配（不是列表）返回 null。 */
 export declare function metadataRequiredHit(cfg: Config, rel: string): boolean | null;
+/** 读并解析一份配置。返回 [cfg, problem]；报错只给路径与行号，不回显文件内容。 */
+export declare function validateConfigText(text: string, shown?: string): [Config, Problem | null];
 /**
  * 读配置。默认读 <root>/governance/project.yaml。
  * configPath 给了就读那个文件，可以在被扫描项目之外——这样才能在不往被测项目写任何东西的前提下扫只读项目。

@@ -163,6 +163,11 @@ export function loadExceptions(configDir: string, root?: string | null, today?: 
     if (typeof code === 'string') return [[], [`${EXCEPTIONS_FILE} 读不了：${errnoName(code)}: ${path}`], path, []] // D10
     throw e
   }
+  return parseExceptionsText(text, today, path)
+}
+
+/** 纯文本入口；复用登记册原有第一表、关闭优先、项目自有行和到期校验，不做文件访问。 */
+export function parseExceptionsText(text: string, today?: CalDate, path: string | null = null): ExceptionsResult {
   const table = firstMdTable(text)
   if (table === null) return [[], [`${EXCEPTIONS_FILE} 里没有 markdown 表；本工具只读第一张表`], path, []]
 

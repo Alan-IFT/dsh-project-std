@@ -19,6 +19,10 @@
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./config": {
+      "types": "./lib/config_plugin.d.ts",
+      "default": "./lib/config_plugin.js"
+    },
     "./skills": {
       "types": "./lib/skills_plugin.d.ts",
       "default": "./lib/skills_plugin.js"

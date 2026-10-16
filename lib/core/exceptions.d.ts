@@ -44,3 +44,5 @@ export type ExceptionsResult = [rows: ExRow[], problems: string[], sourcePath: s
  * - own：未关闭的项目自有例外行（规则不含 `/`），只取到期。02 §4「到期未清理 CI 转红」对它们同样成立，到期由调用方按运行日判。
  */
 export declare function loadExceptions(configDir: string, root?: string | null, today?: CalDate): ExceptionsResult;
+/** 纯文本入口；复用登记册原有第一表、关闭优先、项目自有行和到期校验，不做文件访问。 */
+export declare function parseExceptionsText(text: string, today?: CalDate, path?: string | null): ExceptionsResult;
