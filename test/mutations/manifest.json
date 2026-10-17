@@ -2,9 +2,11 @@
  {"id":"M1","title":"丢 dsh.bundle.patch","file":"package.json","from":"\"bundle\": {\n      \"patch\": \"./cordis.patch.yml\"\n    }","to":"\"bundle\": {}"},
  {"id":"M2","title":"dsh.bundle.patch 指向不存在的文件","file":"package.json","from":"\"patch\": \"./cordis.patch.yml\"","to":"\"patch\": \"./nope.yml\""},
  {"id":"M3","title":"manifestVersion 写成 2","file":"package.json","from":"\"manifestVersion\": 1","to":"\"manifestVersion\": 2"},
- {"id":"M4","title":"丢 engines.dsh","file":"package.json","from":",\n    \"dsh\": \"0.2.0-rc.2\"\n  }","to":"\n  }"},
- {"id":"M5","title":"engines.dsh 写成没验证过的范围","file":"package.json","from":"\"dsh\": \"0.2.0-rc.2\"","to":"\"dsh\": \">=0.2.0-rc.2 <0.3.0\""},
- {"id":"M6","title":"engines.dsh 写成空串","file":"package.json","from":"\"dsh\": \"0.2.0-rc.2\"","to":"\"dsh\": \"\""},
+ {"id":"M4","title":"丢 engines.dsh","file":"package.json","from":",\n    \"dsh\": \"0.2.0-rc.2 || 0.2.1-rc.2\"\n  }","to":"\n  }"},
+ {"id":"M5","title":"engines.dsh 写成没验证过的范围","file":"package.json","from":"\"dsh\": \"0.2.0-rc.2 || 0.2.1-rc.2\"","to":"\"dsh\": \">=0.2.0-rc.2 <0.3.0\""},
+ {"id":"M6","title":"engines.dsh 写成空串","file":"package.json","from":"\"dsh\": \"0.2.0-rc.2 || 0.2.1-rc.2\"","to":"\"dsh\": \"\""},
+ {"id":"M26","title":"engines.dsh 删掉一个已验证宿主（0.2.1-rc.2 会被整包跳过）","file":"package.json","from":"\"dsh\": \"0.2.0-rc.2 || 0.2.1-rc.2\"","to":"\"dsh\": \"0.2.0-rc.2\""},
+ {"id":"M27","title":"engines.dsh 换成没验证过的 0.2.1-rc.3","file":"package.json","from":"\"dsh\": \"0.2.0-rc.2 || 0.2.1-rc.2\"","to":"\"dsh\": \"0.2.0-rc.2 || 0.2.1-rc.3\""},
  {"id":"M7","title":"照抄规范外的 dsh.compatibility","file":"package.json","from":"\"manifestVersion\": 1,","to":"\"manifestVersion\": 1,\n    \"compatibility\": { \"dshReleases\": { \"0.2.0-rc.2\": \"compatible\" } },"},
  {"id":"M8","title":"包名不等于仓库名","file":"package.json","from":"\"name\": \"dsh-project-std\"","to":"\"name\": \"dsh-std\""},
  {"id":"M9","title":"repository 指回旧仓库名","file":"package.json","from":"git+https://github.com/Alan-IFT/dsh-project-std.git","to":"git+https://github.com/Alan-IFT/ai_dev_system.git"},
@@ -21,7 +23,7 @@
  {"id":"M20","title":"files 带上 test","file":"package.json","from":"    \"lib\",\n","to":"    \"lib\",\n    \"test\",\n"},
  {"id":"M21","title":"files 带上 tools/dsh-std（旧插件）","file":"package.json","from":"    \"lib\",\n","to":"    \"lib\",\n    \"tools/dsh-std\",\n"},
  {"id":"M22","title":"files 丢 cordis.patch.yml","file":"package.json","from":"    \"cordis.patch.yml\",\n    \"README.md\",","to":"    \"README.md\","},
- {"id":"M23","title":"files 丢 LICENSE","file":"package.json","from":"    \"README.md\",\n    \"LICENSE\"\n","to":"    \"README.md\"\n"},
+ {"id":"M23","title":"files 丢 LICENSE","file":"package.json","from":"    \"README.md\",\n    \"LICENSE\",\n","to":"    \"README.md\",\n"},
  {"id":"M24","title":"bin 指向不存在的文件","file":"package.json","from":"\"std-check\": \"lib/cli.js\"","to":"\"std-check\": \"lib/nope.js\""},
  {"id":"M25","title":"exports 的 ./skills 指向不存在的文件","file":"package.json","from":"\"default\": \"./lib/skills_plugin.js\"","to":"\"default\": \"./lib/nope.js\""}
 ]

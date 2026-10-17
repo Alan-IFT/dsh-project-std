@@ -14,10 +14,13 @@ test('收录要求：声明 dsh.bundle.patch，且指向的 cordis.patch.yml 真
   assert.ok(existsSync(join(root, 'cordis.patch.yml')))
 })
 
-test('官方清单字段：dsh.manifestVersion 是 1；engines.dsh 声明验证过的 DSH 版本（官方规范：声明式，安装器不强制，省略即“未声明”）', () => {
+test('官方清单字段：dsh.manifestVersion 是 1；engines.dsh 只列实际验证过的精确版本（0.2.1 起宿主导入前强制校验，不满足整包跳过）', () => {
   assert.equal(pkg.dsh.manifestVersion, 1)
   assert.equal(typeof pkg.engines?.dsh, 'string'); assert.ok(pkg.engines.dsh.length > 0, 'engines.dsh 不能为空')
-  assert.match(pkg.engines.dsh, /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/, '只在已验证的版本上声明：写精确版本，不写没验证过的范围')
+  const entries = pkg.engines.dsh.split('||').map((s) => s.trim())
+  assert.ok(entries.length >= 1, 'engines.dsh 至少列一个版本')
+  assert.deepEqual(entries, ['0.2.0-rc.2', '0.2.1-rc.2'], '验证过的宿主版本清单；新增一项前先在该宿主上实测插件能激活')
+  for (const e of entries) assert.match(e, /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/, '每一项都写精确版本，不写没验证过的范围')
 })
 
 test('不抄规范外的字段：官方 package-manifest 里没有 dsh.compatibility（那是个别社区包自己加的），这里不写', () => {
