@@ -22,6 +22,7 @@ const PAT = /Claude Code|claude-code|CLAUDE\.md|\.claude\/|claude plugin|\.std\/
 /** [路径正则, 理由]。第一个匹配的生效。 */
 const ALLOW = [
   [/^docs\/(审计记录|归档|参考资料|参考资料-Claude)\//, '冻结区（governance/project.yaml 的 layout.frozen）：当时的记录，不改写历史'],
+  [/^(DSH-FINDINGS\.md|review\/PLAN-REVIEW\.md)$/, '冻结研究／审查记录（2026-10-12，2026-10-17 收口时入库）：比较对象本身包含旧宿主路径，点名旧物是内容而不是现行行为；不进规范正文与交付面，文件头已声明效力为零'],
   [/^标准\/参考资料\//, '冻结区：研究证据'],
   [/^docs\/(决策日志|失败Case清单)\.md$/, '历史叙述：决策与失败案例按当时的事实记录，D-135 起的废弃是其中的内容'],
   [/^docs\/重构设计-TS插件化\.md$/, '本次重构的设计与进度账：讲怎么清除，天然点名旧物'],
