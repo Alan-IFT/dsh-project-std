@@ -1029,6 +1029,20 @@ dsh-project-std/                     ← 仓库根 = 插件包根
 
 **交接判据**：源码及生成物修复与安装／发版明确分开；验收后记录基线 HEAD、dirty 范围及关键源码／lib 的 SHA256 作为本次构建身份，不能用未变的 package 0.1.0 冒充新安装版本。采用方另获授权后核自己已装 CLI 的身份（报告 tool-identity、锁定提交、必要的 lib 文件哈希），确认是修复产物再 rerun；期望列出 gate.sh 原行、现行执行入口类别、删除前警示与 caller 专属判断，同时保留基线、历史及无关工作。未安装／未发布须原样报告。
 
+### 12.46 DSH 0.2.1-rc.2 支持与在途分支收口（2026-10-17）
+
+**起因**：用户在 Desktop 把宿主升级到 0.2.1 后要求「完成剩余工作，然后支持 dsh 版本 v0.2.1-rc.2」。先查事实：共享 profile 里 `dsh-project-std` 已装到 `3ae6da0`（版本仍 `0.1.0`，`engines.dsh` 精确写 `0.2.0-rc.2`），而本会话技能目录里已没有 `std-*`、`skill` 工具对 `std-01-project-management` 返回 unknown——不是没装，是**装了但整包没被导入**。
+
+**根因（读实际 ASAR，V1 一手）**：`@deepseek-ai/dsh-app-boot@0.2.1-rc.2` 的 `lib/index.js` 新增 `unmetRequirements()`／`evaluatePluginCompatibility()`：声明了 `engines.dsh` 时**只由该范围决定**，否则逐条核对 `@deepseek-ai/dsh`／`@deepseek-ai/dsh-*` 的 `peerDependencies`；比较是 `semver.satisfies(runtime, range, { includePrerelease: true })`。profile 在导入插件前执行该判定，不满足即跳过 bundle 并列入 `skippedBundles`；`@deepseek-ai/dsh-plugin-manager@0.2.1-rc.2` 的安装入口同样先拒绝（`incompatible-version`），补救只有显式精确版本豁免，且豁免不随宿主或插件升级继承。0.2.0-rc.2 的同一文件没有 `engines.dsh` 分支、只查 peer，所以旧声明在旧宿主上从未暴露这个风险。**首例后果**：精确版本 `0.2.0-rc.2` 对 `0.2.1-rc.2` 不满足 → 三个入口全部不挂载。
+
+**改动**：`engines.dsh` 改为 `0.2.0-rc.2 || 0.2.1-rc.2`——只列**实际验证过**的宿主精确版本，不用范围；新增宿主版本时先在它上面实测后显式加入。`test/manifest.test.mjs` 把「单个精确版本」改为「已验证版本清单」并钉住内容；`test/mutations/manifest.json` 跟到新锚点并补 M26（删一个已验证宿主）／M27（换成未验证的 `0.2.1-rc.3`），同时修掉 a035d86 打包闭包提交留下的失效锚点 M23。`tools/std/README` 改掉「该字段只是给人看的」这一过时说明，写明 0.2.1 起会挡路、失败形态与新增宿主的流程。共享 profile 未改、未安装、未发布。
+
+**验证（机械项）**：用实际 0.2.1-rc.2 ASAR 的 `evaluatePluginCompatibility` 直接判定：新清单在 `0.2.1-rc.2`、`0.2.0-rc.2` 均接受，在未验证的 `0.2.1-rc.3` 与**旧精确声明**（即已装 `3ae6da0` 的身份）上均拒绝。一次隔离真实宿主组合（同 ASAR 的 `boot` + 真实 Loader + 真实 `dsh-skill`／`dsh-tools`／`fs-sandbox`／`user-approval` + 本包三入口）12/12 PASS：条目全激活、五个 `std-*` 技能注册、`std_config` 注册、路径层对受管目标 `ask` 且批准后 body 执行、非受管目标 `allow`、`std_config inspect` 可执行。本仓 `tsc --noEmit`、构建、全量测试（1119 条，0 fail）、清单变异 27/27 均通过。原始回执与限制见 `docs/审计记录/2026-10-17-DSH0.2.1兼容与在途收口.md`。
+
+**未验证**：共享 profile 换装后的真实会话（技能加载、`std_config` 可见性、真实文件工具上的 `ask`、完整模型回合、宿主 UI 审批）、0.2.1 的 Auto review 映射、0.2.1 的 `.d.ts` 声明级编译（本地锁的仍是 0.2.0 类型包）。**交叉事实**：`dsh-skill` 的 `lib/index.js` 在 0.2.0 与 0.2.1 之间逐字节相同，`tools/pre-execute` 的 waterfall 代码同形；`dsh-tools`／`dsh-fs` 的方法名与签名按 ASAR 源码核对未变。这些解释性判断仍是生成者自证，按 30 §2 P1 记未定。
+
+**在途分支收口**：`main` 以 `--ff-only` 前进到 `feat/config-governance-v1` 的 `3ae6da0`，eecf045（migrate）、e782f27／a035d86（路径层与打包闭包）、b90f36a→3ae6da0（配置治理）的提交历史全部并入；工作树原来的混合改动先整份备份再按逐文件内容恢复较新文档（备份在本机 `.staging/consolidate-20261017/`）。**未推送、未打标签、未发布**；`v0.1.0` 及更早标签原样保留。
+
 ### 12.5 阶段 2 的验收口径（动手前先定，2026-10-06）
 
 **规模实测**：Python 版 10,472 行；`stdlib.py` 1,491 行含约 90 个函数；各文件里引用审计编号或实测缺陷的注释共 **238 处**——每一处是一次真实踩过的坑，迁移时丢一处就是回归。平台相关系统调用（`realpath`、`lstat`、`symlink`、`mkfifo`、`os.open` 等）约 55 处。

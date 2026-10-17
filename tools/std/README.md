@@ -65,7 +65,7 @@ node lib/cli.js config-review D:\projects\example --candidate D:\proposals\excep
 - `lib/selftest*.js`、`lib/core/fixture.js` 是 `std-check --selftest` 的自检夹具，不是测试代码残留：它们造临时目录和临时 git 仓来验证检查器自己，**只写系统临时目录，不写被扫项目**。
 - 项目路径层是本轮未发布候选：默认关闭，只对显式登记项目的 `write`／`edit` 结构化路径要求人审；不做通用 Shell/Git 风险判定。它仅加入 `ask` 或弃权，下游的 `ask`／`deny`／`cancel` 原样保留，审批归宿主；配置、升级与未覆盖面统一见下文「DSH 接法」，不据候选文档推断共享 profile 已启用。
 - `skills/` 是 `标准/` 与 `templates/` 的正文，由 `scripts/build-skills.mjs` 生成，`check-skills-sync` 保证与源一致；技能由 DSH 的技能服务在会话里按需加载。
-- 声明兼容的 DSH 版本（`package.json` 的 `engines.dsh`）只有实际验证过的一个：`0.2.0-rc.2`。官方规范说该字段是声明式的、安装器不强制检查，所以这是给人看的，不是挡路的。
+- 声明兼容的 DSH 版本（`package.json` 的 `engines.dsh`）只列**实际验证过**的宿主精确版本：`0.2.0-rc.2 || 0.2.1-rc.2`。**0.2.1 起这条会挡路，不再只是给人看的**：宿主在导入插件前按 `engines.dsh`（声明了它时忽略 `peerDependencies`）对运行时版本做 semver 校验（`includePrerelease`，预发布参与比较），不满足就**整包跳过**、插件不挂载，且宿主的安装入口也会先拒绝；旧安装因此会在升级宿主后静默失去技能、`std_check` 与路径层。新增一个宿主版本前，要在这个宿主上用隔离组合实测三个入口都能激活、技能目录与 `std_config` 都在，再把精确版本加进这串；**不写没验证过的范围**（范围会顺带放行其它预发布）。排除方式就是精确版本本身：`0.2.1-rc.3` 这类未验证版本会被拒绝，先验证再改这一行。
 
 ## 首跑怎么读
 
@@ -168,7 +168,7 @@ node lib/cli.js config-review D:\projects\example --candidate D:\proposals\excep
 
 审批为 `never` 时，宿主自动拒绝所有触发 `ask` 的动作；这不等于所有普通写入都禁止。可以继续只读盘点、准备差异和验证清单，但**聊天中的“允许继续”不等于工具层批准**。遇到受控动作应停止执行该项，不能拆命令、换工具或改写路径绕过守卫。可由人通过宿主正常权限入口启用审批后在父会话执行，或由人亲自按审阅方案操作并提供差异、钩子正反例和迁移前后逐 id 对账结果；本插件不代替采用项目做迁移决策。
 
-保持 Full access 时，官方 `0.2.0-rc.2` 文档提供的路径是：在正在运行并已登录的 DSH Web 侧栏 **Plugins** 启用 **Auto review**（默认关闭），在当前会话输入 `/permission` 查看可选项，在输入框旁权限选择器选 **Auto review (EXP)** 并确认风险提示；也支持用户显式输入 `/permission auto`。它组合 Full access + `ask`，**reviewer 的 `allow` 不覆盖下游决定**：下游 `ask` 仍走标准审批、须获有效批准；下游 `deny` 保持拒绝，不能靠人工应答改为放行；不在通用设置／未来会话默认值中。Auto 的进程内委派子会话固定 `never`，父会话切换不意味着已创建子会话获得审批。出处：[权限预设](https://unpkg.com/@deepseek-ai/dsh-permission-presets@0.2.0-rc.2/README.md)、[Auto review](https://unpkg.com/@deepseek-ai/dsh-experimental-auto-review@0.2.0-rc.2/README.md)。**当前部署是否加载 Auto、具体控件与这条路径的实际行为尚未实测**；以 `/permission` 列表和实际审批事件为准，不要求为此降到只读或工作区权限。
+保持 Full access 时，官方 `0.2.0-rc.2` 文档提供的路径是：在正在运行并已登录的 DSH Web 侧栏 **Plugins** 启用 **Auto review**（默认关闭），在当前会话输入 `/permission` 查看可选项，在输入框旁权限选择器选 **Auto review (EXP)** 并确认风险提示；也支持用户显式输入 `/permission auto`。它组合 Full access + `ask`，**reviewer 的 `allow` 不覆盖下游决定**：下游 `ask` 仍走标准审批、须获有效批准；下游 `deny` 保持拒绝，不能靠人工应答改为放行；不在通用设置／未来会话默认值中。Auto 的进程内委派子会话固定 `never`，父会话切换不意味着已创建子会话获得审批。出处：[权限预设](https://unpkg.com/@deepseek-ai/dsh-permission-presets@0.2.0-rc.2/README.md)、[Auto review](https://unpkg.com/@deepseek-ai/dsh-experimental-auto-review@0.2.0-rc.2/README.md)（这两份是 0.2.0-rc.2 的；**0.2.1-rc.2 上未逐条重测**，以本机 `/permission` 列表与实际审批事件为准）。**当前部署是否加载 Auto、具体控件与这条路径的实际行为尚未实测**；以 `/permission` 列表和实际审批事件为准，不要求为此降到只读或工作区权限。
 
 **执行层由采用项目自己接**，标准不发**生效的**钩子、流水线或 agent 侧配置——它们随宿主工具变，上游给一份就会过期成第二处权威；`templates/` 里的 agent、skill 文件是供复制的载体实例，拷进项目的 `.agents/` 之后才生效，由采用方自己决定。插件的项目路径接入契约见下节「DSH 接法」。**发布与效力边界不在本轮改写**：D-108 登记行仍按旧交付面约定，D-137 的取代提议尚未生效（标准仓 `docs/决策日志.md`）；候选职责收缩不自动改变这些约定。
 `std-check` 判的是本标准要求的工件与结构，不是 [01 §5.6](../../标准/01-项目管理标准.md#gates) 的 G1–G8；测试、格式、依赖审计各按该节写执行点，可与它并列接进同一钩子。承载可以是版本控制钩子、流水线作业或按清单执行的人工步骤，语义相同。
@@ -219,7 +219,7 @@ node lib/cli.js config-review D:\projects\example --candidate D:\proposals\excep
 3. 沙箱与审批归 DSH。**Full access + never 无文件沙箱，也没有 Auto 通用风险评审**；收到的 ask 自动拒绝，不证明所有风险都被分类。Auto 是可选实验能力，正常入口与子会话限制见「迁移与工具审批」；direct Node 与 PTC outer program 不受 inner review 全覆盖。删除旧启发式不是风险等价迁到宿主，不另造审批、grant 或并行权限体系。
 4. 标准 ask 输送／应答缺席与取消的执行结果由宿主负责。`the user rejected tool` 不能单独证明人工点了拒绝；逐调用核 asked.reason、callId、decided.outcome 与有效策略。诊断问题仍是上游交接材料，**本仓未改宿主实现**。`ctx.tools.restrict()` 是可见性过滤，不是安全边界。
 
-**历史证据与当前未定**：DSH 0.2.0-rc.2 上旧版本的隔离安装、技能注册以及 2026-10-10 重启后真实会话询问采纳，保留在标准仓历史设计 `docs/重构设计-TS插件化.md` §12.35／12.36／12.43；未发布旧守卫候选的修复／失败记录保存在源主仓本机冻结回执，不纳入本提交切片，不作为现行使用指导。既有 migrate 修复的提交验收见标准仓 `docs/审计记录/2026-10-11-migrate提交验收.md`，不证明本轮路径层；本切片不纳入其后独立安装续验记录。新配置加载、路径层行为与下游 listener 决定保留已在真实 ASAR 隔离组合中核验；该组合使用 Map-only 工具与最小 session carrier，不证明正常 profile 换装、真实文件工具、完整子会话或模型回合。上述完整集成仍未验收，不能将隔离组合或历史 PASS 折为新候选已安装启用。入口、合同格式及恢复接法仍看标准仓 `docs/附录-载体实例/DSH载体映射.md` 和 [03 §8](../../标准/03-Agent信息获取与上下文管理.md#recovery)，本节不复制宿主应用说明。
+**历史证据与当前未定**：DSH 0.2.0-rc.2 上旧版本的隔离安装、技能注册以及 2026-10-10 重启后真实会话询问采纳，保留在标准仓历史设计 `docs/重构设计-TS插件化.md` §12.35／12.36／12.43；未发布旧守卫候选的修复／失败记录保存在源主仓本机冻结回执，不纳入本提交切片，不作为现行使用指导。既有 migrate 修复的提交验收见标准仓 `docs/审计记录/2026-10-11-migrate提交验收.md`，不证明本轮路径层；本切片不纳入其后独立安装续验记录。新配置加载、路径层行为与下游 listener 决定保留已在真实 ASAR 隔离组合中核验；该组合使用 Map-only 工具与最小 session carrier，不证明正常 profile 换装、真实文件工具、完整子会话或模型回合。**0.2.1-rc.2 支持的本轮证据**：用实际 0.2.1-rc.2 ASAR（SHA256 `47874618…`）的隔离组合核到三个入口全部激活、五个 `std-*` 技能注册、`std_config` 注册、路径层对受管目标返回 `ask` 且批准后 body 执行、非受管目标 `allow`、`std_config inspect` 可执行（12/12 检查，见标准仓 `docs/审计记录/2026-10-17-DSH0.2.1兼容与在途收口.md`）；它仍不证明共享 profile 已换装、真实文件工具、完整模型回合或宿主 UI 审批。上述完整集成仍未验收，不能将隔离组合或历史 PASS 折为新候选已安装启用。入口、合同格式及恢复接法仍看标准仓 `docs/附录-载体实例/DSH载体映射.md` 和 [03 §8](../../标准/03-Agent信息获取与上下文管理.md#recovery)，本节不复制宿主应用说明。
 
 ## 加一个自己的检查器
 
