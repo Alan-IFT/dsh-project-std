@@ -7,7 +7,7 @@
 
 ## 配置治理
 
-`std_config`（`dsh-project-std/config`）是**未安装／未发布候选**，当前共享 Desktop 是已验收的 a035 固定安装、旧路径 guard 默认关闭，不会随此树源码变化。新 bundle 配置入口默认启用，原生编辑保护 `protectNativeEdits:false`；完整接口与限制见 [CONTRACT §10](CONTRACT.md#10-配置治理候选接口)。这不是任意仓库写工具，只认当前 agent/session 的 cwd 及固定治理路径。
+`std_config`（`dsh-project-std/config`）随当前候选包提供；共享 Desktop 已锁定到包含此入口的提交并在新会话调用过 `inspect`，但尚未从发布标签安装。配置入口默认启用，原生编辑保护 `protectNativeEdits:false`；完整接口与限制见 [CONTRACT §10](CONTRACT.md#10-配置治理候选接口)。这不是任意仓库写工具，只认当前 agent/session 的 cwd 及固定治理路径。
 
 在已挂载候选且 tools/fs 注入齐全的独立验证环境，模型从一开始使用专用入口（以下为工具参数，不是 Shell 命令）：
 
@@ -38,7 +38,7 @@ node lib/cli.js config-review D:\projects\example --candidate D:\proposals\excep
 
 装有相同候选 CLI 的环境可将 `node lib/cli.js` 换成 `std-check`。退出 0 仅表示有效 review 已输出，**不是批准或应用**；无效／错误退出 2。此子命令不接收 --config/--apply/--approved；旧 check/migrate 不接收 --candidate/--target。
 
-可选原生保护由 profile 维护方通过正常宿主配置将第三稳定 id `dsh-project-std-config` 的 `protectNativeEdits` 设 true，不能在 project.yaml 自行关闭。仅拒当前根固定文件的已知 write/edit 及 str_replace_editor 变更命令，read/view 不拦；Shell、外部写者不覆盖。**原工具已拒后停止，禁止自动改走专用工具重试**。本轮不改真实 profile、不安装候选；隔离真实宿主组合已验审批、沙箱与原生保护管线，范围与未覆盖项见设计文档「验收结果」，不等于真实 profile 已安装或人类 UI 已验证。
+可选原生保护由 profile 维护方通过正常宿主配置将第三稳定 id `dsh-project-std-config` 的 `protectNativeEdits` 设 true，不能在 project.yaml 自行关闭。仅拒当前根固定文件的已知 write/edit 及 str_replace_editor 变更命令，read/view 不拦；Shell、外部写者不覆盖。**原工具已拒后停止，禁止自动改走专用工具重试**。共享 profile 的精确安装已由包锁与新会话验证；隔离宿主组合另验审批、沙箱与原生保护管线，仍不能替代真实会话里人类 UI 批准的验收。
 
 ## 一条命令
 
@@ -131,10 +131,10 @@ node lib/cli.js config-review D:\projects\example --candidate D:\proposals\excep
 
 ## 版本与发布
 
-**版本号只有一处权威：`package.json` 的 `version`，遵循 [semver](https://semver.org/lang/zh-CN/)。** 发布标签是 `v` 加这个号（`version` 是 `0.1.0`，标签就是 `v0.1.0`）；两处必须一致，不手工对应。
+**版本号只有一处权威：`package.json` 的 `version`，遵循 [semver](https://semver.org/lang/zh-CN/)。** 发布标签是 `v` 加这个号（如 `version` 是 `0.2.0`，标签就是 `v0.2.0`）；两处必须一致，不手工对应。
 
 - **打标签前先跑** `node scripts/check-release-tag.mjs v<版本>`。它只读、不打标签、不推送，逐项核对：标签 = `v` + `version` 且是合法 semver；本地与远端都没有同名标签；工作区干净；当前在 `main`；`HEAD` 已推送且等于 `origin/main`。**查不了远端不当作“标签不存在”**，会明确报未通过。
-- **升版本号**：先改 `package.json` 的 `version`，提交并推送，再打同名标签。破坏性变更升 MAJOR（`0.x` 阶段升 MINOR），向后兼容的新功能升 MINOR，修复升 PATCH；预发布用 semver 的预发布段（`v0.2.0-rc.1`）。
+- **升版本号**：先改 `package.json` 的 `version`，提交并推送，再打同名标签。破坏性变更升 MAJOR（`0.x` 阶段升 MINOR），向后兼容的新功能升 MINOR，修复升 PATCH；预发布用 semver 的预发布段（如 `v0.3.0-rc.1`）。本次从 `v0.1.0` 升到 `v0.2.0`：配置治理是新增能力，旧路径配置的格式也不兼容；不能以只加宿主兼容为由当作 `0.1.1`。本次从插件仓 `main` 发布是 [D-108 的限版本例外](../../docs/决策日志.md#effective-register)；后续版本不自动沿用。
 - **旧日期式标签**（`2026-10-05.1`、`2026-10-10-pre.4` 之类）是迁移期的遗留：保留不动，因为三个仍在用 `git subtree` 的旧项目、以及已装过预发布版本的 profile 锁文件都引用着它们。**新标签一律用 `v` 开头的 semver**；`node scripts/check-release-tag.mjs --list` 能列出现有标签各属哪一类。
 - **打标签与推送是对外可见、难以撤回的动作**（别人的锁文件会引用它），由具名的人执行，不由脚本代劳。
 
@@ -179,13 +179,13 @@ node lib/cli.js config-review D:\projects\example --candidate D:\proposals\excep
 
 ## DSH 接法
 
-**这是 DSH 的载体实例，不是标准正文或授权。** `policyVersion: 2` 路径职责收缩已随已验收的 a035 固定包经用户正常入口安装；重启后的技能调用、包身份与默认关闭配置已有证据，不等于路径保护已启用。配置治理是本树新增的已验收但未安装／未发布能力，隔离宿主证据与限制见设计文档「验收结果」。package 暂为 0.1.0，**同号不能识别能力**：切换前核精确 commit、制品／tool-identity digest 与 policyVersion，不自动更新、重装或据文档推断运行中版本。
+**这是 DSH 的载体实例，不是标准正文或授权。** `policyVersion: 2` 路径职责收缩与配置治理已随本轮提交装入共享 Desktop；新会话已加载标准技能并调用 `std_config inspect`。包的路径层默认关闭；共享 Desktop 目前仅为临时测试路径显式启用，真实 `edit` 已触发宿主询问，但当前会话审批 `never` 自动拒绝，人工批准与实际写入仍未验证；安装提交与发布标签仍是不同身份。版本以 `package.json` 为准，切换前仍须核精确 commit、制品／tool-identity digest 与 policyVersion，不据文档推断运行中版本。
 
 ### 分工与显式配置
 
 标准技能与 `std-check` 仍由插件提供，提交钩子仍按项目自己的质量合同执行；它们不因路径层默认关闭而关闭。接提交钩子前先在项目根跑 `std-check .`、确认退出 0，避免一接入就锁住正常提交；这不授予路径层或发布权限。本候选 bundle 保留 `dsh-project-std` 与 `dsh-project-std-skills`，新增第三稳定 id `dsh-project-std-config`；主插件默认 `enabled: false`、`policyVersion: 2`、`projects: []`，技能和配置入口默认启用，原生治理编辑保护默认关闭。无配置或 disabled 不挂路径监听，没有隐式 AGENTS、状态文件、钩子或插件源码保护。
 
-需要路径人审时，由**用户／profile 维护方在正常配置通道**准备同 id 完整覆盖；以下只是候选示例，不是本轮写入真实 profile 的操作，也不授权 AI 改 profile：
+需要路径人审时，由**用户／profile 维护方在 `$DSH_HOME/profiles/<profile>/cordis.patch.yml`**（Desktop 共享 profile 通常是 `$DSH_HOME/profiles/desktop/cordis.patch.yml`）追加同 id 的完整覆盖行；不是在 Plugins 安装页编辑字段，也不要改包内 patch 或 profile 的 package.json。宿主按 bundle → profile patch → home patch → CLI overlay 逐层应用，同 id 的后层替换整行 `config`，不深度合并（[DSH 官方插件打包说明](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.zh.md)）。保存前备份、保存后回读有效配置并用新会话测试；下面是示例，不授权 AI 修改共享 profile：
 
 ```yaml
 - id: dsh-project-std
@@ -208,7 +208,7 @@ node lib/cli.js config-review D:\projects\example --candidate D:\proposals\excep
 
 旧主配置顶层 `root`／`protect` 即使为空，或 enabled=true 缺新清单，都明确报迁移错误；旧键仅保留作检测，不能自动清空、过滤或转成默认关闭。schema 与 apply 对完整输入校验；**插件挂载报错不等于工具失败关闭**，宿主若仍运行工具，不能称保护仍在。
 
-因此维护方须先保留原精确包／锁定身份与完整配置，逐项确认原约束、退出覆盖面和新 protect 的选择，再在正常可审批环境验证 schema／挂载、真实结构化写改命中及更严下游保留，之后才切换。失败经宿主正常通道退回原精确包与原配置；不能用相同版本号找回能力，不能借升级重发此前被拒动作。本轮未执行这条升级链。
+因此维护方须先保留原精确包／锁定身份与完整配置，逐项确认原约束、退出覆盖面和新 protect 的选择，再在正常可审批环境验证 schema／挂载、真实结构化写改命中及更严下游保留，之后才切换。失败经宿主正常通道退回原精确包与原配置；不能用相同版本号找回能力，不能借升级重发此前被拒动作。共享 profile 已完成换装、包身份核对及临时测试路径的自动拒绝验证；批准后写入与回退仍待验。
 
 状态工件的日常更新政策仍属项目；把状态文件加入 protect 会使其所有结构化 write/edit 均要求询问，不能等价表达“只防删除或清空”。**由项目负责人选择是否纳入**，不默认加入、不自动替项目决定规则。
 
@@ -219,7 +219,7 @@ node lib/cli.js config-review D:\projects\example --candidate D:\proposals\excep
 3. 沙箱与审批归 DSH。**Full access + never 无文件沙箱，也没有 Auto 通用风险评审**；收到的 ask 自动拒绝，不证明所有风险都被分类。Auto 是可选实验能力，正常入口与子会话限制见「迁移与工具审批」；direct Node 与 PTC outer program 不受 inner review 全覆盖。删除旧启发式不是风险等价迁到宿主，不另造审批、grant 或并行权限体系。
 4. 标准 ask 输送／应答缺席与取消的执行结果由宿主负责。`the user rejected tool` 不能单独证明人工点了拒绝；逐调用核 asked.reason、callId、decided.outcome 与有效策略。诊断问题仍是上游交接材料，**本仓未改宿主实现**。`ctx.tools.restrict()` 是可见性过滤，不是安全边界。
 
-**历史证据与当前未定**：DSH 0.2.0-rc.2 上旧版本的隔离安装、技能注册以及 2026-10-10 重启后真实会话询问采纳，保留在标准仓历史设计 `docs/重构设计-TS插件化.md` §12.35／12.36／12.43；未发布旧守卫候选的修复／失败记录保存在源主仓本机冻结回执，不纳入本提交切片，不作为现行使用指导。既有 migrate 修复的提交验收见标准仓 `docs/审计记录/2026-10-11-migrate提交验收.md`，不证明本轮路径层；本切片不纳入其后独立安装续验记录。新配置加载、路径层行为与下游 listener 决定保留已在真实 ASAR 隔离组合中核验；该组合使用 Map-only 工具与最小 session carrier，不证明正常 profile 换装、真实文件工具、完整子会话或模型回合。**0.2.1-rc.2 支持的本轮证据**：用实际 0.2.1-rc.2 ASAR（SHA256 `47874618…`）的隔离组合核到三个入口全部激活、五个 `std-*` 技能注册、`std_config` 注册、路径层对受管目标返回 `ask` 且批准后 body 执行、非受管目标 `allow`、`std_config inspect` 可执行（12/12 检查，见标准仓 `docs/审计记录/2026-10-17-DSH0.2.1兼容与在途收口.md`）；它仍不证明共享 profile 已换装、真实文件工具、完整模型回合或宿主 UI 审批。上述完整集成仍未验收，不能将隔离组合或历史 PASS 折为新候选已安装启用。入口、合同格式及恢复接法仍看标准仓 `docs/附录-载体实例/DSH载体映射.md` 和 [03 §8](../../标准/03-Agent信息获取与上下文管理.md#recovery)，本节不复制宿主应用说明。
+**历史证据与当前未定**：DSH 0.2.0-rc.2 上旧版本的隔离安装、技能注册以及 2026-10-10 重启后真实会话询问采纳，保留在标准仓历史设计 `docs/重构设计-TS插件化.md` §12.35／12.36／12.43；未发布旧守卫候选的修复／失败记录保存在源主仓本机冻结回执，不纳入本提交切片，不作为现行使用指导。既有 migrate 修复的提交验收见标准仓 `docs/审计记录/2026-10-11-migrate提交验收.md`，不证明本轮路径层；本切片不纳入其后独立安装续验记录。新配置加载、路径层行为与下游 listener 决定保留已在真实 ASAR 隔离组合中核验；该组合使用 Map-only 工具与最小 session carrier，不证明正常 profile 换装、真实文件工具、完整子会话或模型回合。**0.2.1-rc.2 支持的本轮证据**：用实际 0.2.1-rc.2 ASAR（SHA256 `47874618…`）的隔离组合核到三个入口全部激活、五个 `std-*` 技能注册、`std_config` 注册、路径层对受管目标返回 `ask` 且批准后 body 执行、非受管目标 `allow`、`std_config inspect` 可执行（12/12 检查，见标准仓 `docs/审计记录/2026-10-17-DSH0.2.1兼容与在途收口.md`）；共享 profile 是否换装须独立核对锁定提交与实际会话；本轮已核装入与技能／`std_config` 的完整模型回合，临时保护目标的真实 `edit` 被当前 `never` 会话自动拒绝、文件未变，宿主 UI 人工批准及批准后写入仍未验收。入口、合同格式及恢复接法仍看标准仓 `docs/附录-载体实例/DSH载体映射.md` 和 [03 §8](../../标准/03-Agent信息获取与上下文管理.md#recovery)，本节不复制宿主应用说明。
 
 ## 加一个自己的检查器
 

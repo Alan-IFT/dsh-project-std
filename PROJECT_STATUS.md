@@ -1,10 +1,10 @@
 # 项目状态
 
-status_revision：`50`
+status_revision：`51`
 corpus_version：`v0.7-theory-draft`  ← **全仓唯一权威版本号**。各文档不再各自声明版本（2026-09-03 去掉 26 处副本，取值曾在 v0.5/v0.6/v0.7 之间漂移）。冻结快照 `docs/归档/历史/`、研究材料与 `.staging/` 保留各自的版本号，那是它们被冻结时的值。  
 updated_at：2026-10-17
-last_status_change：2026-10-17（在途分支收口：`main` 以 `--ff-only` 并入 migrate 修复、路径层收缩与打包闭包、配置治理的全部本地提交；宿主升级到 DSH 0.2.1-rc.2 后定位到整包被 `engines.dsh` 版本校验跳过，已改为只列验证过的宿主版本，并通过真实 ASAR 隔离组合与本地门禁；未安装、未推送、未发布。经过只看 `git log` 与本轮[审计记录](docs/审计记录/2026-10-17-DSH0.2.1兼容与在途收口.md)）
-当前里程碑：**本仓只支持 DeepSeek Harness（DSH），不再支持 Claude Code（[D-135](docs/决策日志.md#decision-index)）。** 插件 `dsh-project-std` 提供标准技能、`std-check`、默认关闭的显式项目路径人审层与配置治理 `std_config`。2026-10-17 起 `main` 已包含此前三个本地分支的提交（migrate 修复、路径层收缩、打包闭包、配置治理），工作树收口完成。**共享 profile 目前装的是 `3ae6da0`（package `0.1.0`，`engines.dsh` 只写 `0.2.0-rc.2`）；宿主升级到 0.2.1-rc.2 后，启动时的版本校验会跳过整包，`std-*` 技能与 `std_config` 当前不在真实会话里**——要用户经 Desktop 正常 Plugins 入口装入本轮 `main` 提交并重启才恢复。源码已把 `engines.dsh` 改为已验证的 `0.2.0-rc.2 || 0.2.1-rc.2`；真实 0.2.1 ASAR 的隔离组合 12/12 通过（见[审计记录](docs/审计记录/2026-10-17-DSH0.2.1兼容与在途收口.md)），但那不证明共享 profile 已换装。**未推送、未打标签、未发布**；候选默认关闭路径层，接入与限制见 [tools/std/README](tools/std/README.md#dsh-接法)。**研究架构保持现有组织；候选标准与采用检查见[本轮完善记录](docs/审计记录/本轮完善记录.md)。实际项目效果仍待验证；规则效力只查生效登记表，D-108／D-137 与发布流程不在本轮改写。**
+last_status_change：2026-10-17（共享 Desktop 已从旧安装换到本地提交并重启；本会话核到技能与 `std_config`，临时测试路径真实 `edit` 在审批关闭时被自动拒绝；版本升到 `0.2.0`、发布路径获得本次限版本批准，人工 UI 批准仍待验证。经过见[本轮记录](docs/审计记录/2026-10-17-共享profile验收与v0.2.0发布.md)）
+当前里程碑：**本仓只支持 DeepSeek Harness（DSH），不再支持 Claude Code（[D-135](docs/决策日志.md#decision-index)）。** 插件 `dsh-project-std` 提供标准技能、`std-check`、默认关闭的显式项目路径人审层与配置治理 `std_config`。2026-10-17 起 `main` 已包含此前三个本地分支的提交（migrate 修复、路径层收缩、打包闭包、配置治理），工作树收口完成。**共享 Desktop profile 已锁定到包含 0.2.1-rc.2 兼容及配置治理的本地提交**，安装包关键文件与仓库同字节；本会话技能加载和 `std_config inspect` 可用。用户经 profile patch 仅对 `.staging/guard-acceptance.txt` 启用测试保护；真实 `edit` 在当前 `never` 审批策略下被自动拒绝，目标未改变，人工 UI 批准与批准后写入仍未验证。发布版本选择 `0.2.0`（新增配置治理且旧路径配置不兼容），本次从插件仓 `main` 发布的限版本例外由用户批准并记在 [D-108](docs/决策日志.md#effective-register)；D-137 整体取代仍是提议。发布回执与实际标签身份见[本轮记录](docs/审计记录/2026-10-17-共享profile验收与v0.2.0发布.md)；配置入口与限制见 [tools/std/README](tools/std/README.md#dsh-接法)。**研究架构保持现有组织；候选标准与采用检查见[本轮完善记录](docs/审计记录/本轮完善记录.md)。实际项目效果仍待验证。**
 状态：进行中  
 状态负责人：用户与 AI 共同维护
 
@@ -29,7 +29,7 @@ last_status_change：2026-10-17（在途分支收口：`main` 以 `--ff-only` �
 
 - repository：`D:\Programs\AI辅助开发规范及工作流确定`（Windows；2026-10-04 起以此为主工作环境，Ubuntu 后续再支持，旧服务器副本与此处有无未同步差异未核，记未定）
 - worktree/branch：`main`。HEAD 取值不在此抄录——git 是其唯一权威，抄一份必然漂移（[08 §7](docs/08-规范效力元治理.md)）。**更正**：此前记载的"本会话对该文件夹无删除权限、git 无法运行"已不成立——2026-09-03 本会话直接完成了第九轮提交（需先清除一个残留的零字节 `.git/index.lock`）。
-- activity_work_item：[DSH 0.2.1 兼容与在途收口](docs/审计记录/2026-10-17-DSH0.2.1兼容与在途收口.md)（源码已改并经隔离真实宿主验证；共享 profile 仍为 `3ae6da0`、未换装，未推送、未发布）
+- activity_work_item：[共享 profile 验收与 v0.2.0 发布](docs/审计记录/2026-10-17-共享profile验收与v0.2.0发布.md)（安装与模型会话部分已核，真实人工审批未核；发布结果在该记录回读）
 - last_verified_at：2026-10-17
 
 ## 当前风险
@@ -49,7 +49,7 @@ last_status_change：2026-10-17（在途分支收口：`main` 以 `--ff-only` �
 
 **历史记录（2026-10-05／06，旧 Python／内嵌与旧守卫阶段，不是当前部署声明）**：D-135 当时已收尾，守卫装进本机 profile 并真跑过；提交闸门在 Windows 上经真实 `git commit` 走过；Reservoir、CMS、PMC-Planner 三个采用项目都已迁到 DSH 接法并推送（PMC-Planner 另按 ADR-0026 同时支持 Linux 与 Windows）。**已验证（2026-10-06）**：子 agent 与 `subagent_fork` 两条路径都继承守卫（对 `.std/` 的 `write` 与重定向都被拒、未落盘）；插件单测在 Ubuntu 24.04＋Node 24 容器里（真实 `git clone`）471 条 0 失败（22 条是只在 Windows 成立的路径语义，跳过不算通过），Windows 本机 470 过 0 败；`bash` 工具名与 `pwsh` 同一套判定、只有转义方言不同。**不由本仓验证**：DSH 在 Ubuntu 上如何加载插件是 DSH 自己的行为。**已发布 `2026-10-05.1`（2026-10-06）**：此前 Alan 2026-10-05 定「不发」（两处守卫误报修复不值得单发新 tag）；2026-10-06 Alan 说「都做了吧，该抽成公共就抽成公共」，抽出提交钩子选 Python 的公共写法 `tools/std/pick-python.sh` 是实质改动，所以发了新版并把那两处修复一并带出，原因变了、不是反悔。内嵌版本：**CMS、Reservoir、PMC-Planner 三个采用项目都已升到 `2026-10-05.1` 并推送**（Reservoir 是等它在开发中的改动被开发侧提交、工作区变干净后升的——`subtree pull` 要求工作区干净，我没有碰它那 50 条在途改动；PMC-Planner 的钩子是自己的、不调用公共写法，只升版本号）。Reservoir 的钩子与 CMS 的 pre-commit entry 已改引用 `pick-python.sh`，标准仓自己的钩子也是。见[会话交接](docs/附录-载体实例/会话交接.md)。该历史阶段曾记“profile 链接 main、改后重启”，**不适用于现在**；后续共享 profile 的旧 Git 锁定安装与 migrate 独立验收接续见标准仓本机 `.staging/migrate-profile-20261011/INSTALL-REPORT.md`。该报告证明修复提交在独立测试 profile 已装验，不是共享 desktop 已换装；不能据 main 编辑或重启承诺热更新。
 
-**当前悬着、需要用户决定的两件事**：① **共享 profile 换装**——经 Desktop 侧栏 **Plugins** 正常入口把 `dsh-project-std` 重装到本轮 `main` 的提交（以提交对象与原字节为准，核 `engines.dsh` 已是 `0.2.0-rc.2 || 0.2.1-rc.2`），重启后在真实会话复核 `std-*` 技能、`std_config` 可见性、路径层对受管目标的一次 `ask` 与审批；② **是否推送／发布**——按 D-108 约定由具名的人执行，本仓不自行打标签或对外发布。在完成 ① 之前，共享 profile 不是本轮代码，也没有运行验证；不能把隔离组合或旧宿主 PASS 折成“已换装”。现状与限制见[审计记录](docs/审计记录/2026-10-17-DSH0.2.1兼容与在途收口.md)与[会话交接](docs/附录-载体实例/会话交接.md)。
+**当前接续**：共享 profile 的提交身份、技能与 `std_config` 已核；路径层在真实受管 `edit` 上触发 `ask`，但本会话权限为 Full access／审批 `never`，宿主自动拒绝，不是人审 UI 验收。请在 ask 策略的新会话只对已登记的临时文件做批准与原字节回读，随后由 profile 维护方删除该测试覆盖行、重启并确认恢复默认关闭。发布结果、标签与后续从 tag 安装的边界见[本轮记录](docs/审计记录/2026-10-17-共享profile验收与v0.2.0发布.md)；后续发布路径仍需解决 D-108／D-137 的长期冲突。
 
 **其余接续**：研究侧继续，按用户确认的评审建议加入[反馈跨任务生效演练](标准/示例项目-连锁零售中台/反馈跨任务生效演练.md)，专项范围与检查见[完善记录](docs/审计记录/本轮完善记录.md#feedback-exercise)；本仓已更新[当前采用方迁移指引](docs/附录-载体实例/迁移提示词.md#当前采用方交接不是迁移授权或可直接执行的脚本)，原旧提示词已完整归档并标记不可执行，迁移由各采用项目在自己的授权会话执行，本仓不代访问或改项目。既有 migrate 修复已在 `main` 历史（eecf045）并通过其专项验收；独立测试 profile 的安装验证据见本机 `.staging/migrate-profile-20261011/INSTALL-REPORT.md`，不代表共享 desktop 已换装。后续资料按真实缺口选取，研究正文的待裁事项仍只由决策索引管理。[D-057](docs/决策日志.md#effective-register) 于 2027-02-17 复审时，一并复核 [D-061](docs/决策日志.md#decision-index) 的六组跨章边界。2026-09-09 另追加一轮 OpenAI/Anthropic 官方近半年文章专项（管理/运维/上下文三方向共 13 张卡 M-21~25、O-16~20、C-20~22，落进 01/02/03/04），见[完善记录·追加专项](docs/审计记录/本轮完善记录.md#addendum-2026-09)。
 

@@ -1,6 +1,6 @@
 {
   "name": "dsh-project-std",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DeepSeek Harness 插件：AI 辅助开发的项目管理标准——标准正文以技能分发、std-check 机械检查器、受控动作询问。",
   "type": "module",
   "main": "lib/index.js",
