@@ -17,9 +17,11 @@ test('NAME 与 Python 版一致', () => assert.equal(NAME, 'single-authority'))
 
 test('selftest：每条都 PASS，且 (id, status) 集合与黄金样本完全相同', () => {
   const got = selftest()
-  assert.ok(got.length >= 17)
+  const unreadable = got.filter(f => f.title === '反例一之二：读不了的被跟踪文件须记一条未定（single-authority/unreadable）')
+  const expectedUnreadable = typeof process.geteuid === 'function' && process.geteuid() !== 0 ? 1 : 0
+  assert.equal(unreadable.length, expectedUnreadable, '非 root POSIX 必须验证 chmod 读不了的反例')
   assert.deepEqual(got.filter((f) => f.status !== 'PASS').map((f) => `${f.title}｜${f.evidence}`), [])
-  assert.deepEqual(got.map((f) => [f.id, f.status]).sort(), probes.map((p) => [p.id, p.status]).sort())
+  assert.deepEqual(got.filter(f => !unreadable.includes(f)).map((f) => [f.id, f.status]).sort(), probes.map((p) => [p.id, p.status]).sort())
 })
 
 // ---- 直接断言（所有平台都跑）----
