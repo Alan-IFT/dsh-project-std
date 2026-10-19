@@ -1,9 +1,9 @@
 # 项目状态
 
-status_revision：`55`
+status_revision：`56`
 corpus_version：`v0.7-theory-draft`  ← **全仓唯一权威版本号**。各文档不再各自声明版本（2026-09-03 去掉 26 处副本，取值曾在 v0.5/v0.6/v0.7 之间漂移）。冻结快照 `docs/归档/历史/`、研究材料与 `.staging/` 保留各自的版本号，那是它们被冻结时的值。  
 updated_at：2026-10-18
-last_status_change：2026-10-18（D-108 过渡合同生效，PR #1 的跳钩子断链负例失败且阻断合入；PR #2 的合并后 push CI 暴露 Git 后台 `maintenance.lock` 偶发测试假失败，PR #3 已把夹具自动维护关闭，其 `main` 提交 `2db5823f` push CI 成功。主干需持续保有 `verify` 必需检查；未发新版标签、未换装插件，真实采用效果仍未验证。2026-10-17 的 `v0.2.0` 装机发布见原记录。）
+last_status_change：2026-10-18（受保护主干的集成闸门与 `layout.frozen` 方向证明已通过 CI；以 NFBY_Reservoir 冻结提交所做的只读开发试点，验证两版检查结果一致和受控断链拦截，长期维护收益、盲态接手仍未定，见[试点回执](docs/审计记录/2026-10-18-Reservoir开发流程只读试点.md)。`0.3.0` 是待经 PR 检查与人工标签步骤的发布候选；共享 Desktop 仍装 `v0.2.0`，不称已换装。D-108 旧渠道只读、D-137 整体取代仍待迁移。）
 当前里程碑：**本仓只支持 DeepSeek Harness（DSH），不再支持 Claude Code（[D-135](docs/决策日志.md#decision-index)）。** 插件 `dsh-project-std` 提供标准技能、`std-check`、默认关闭的显式项目路径人审层与配置治理 `std_config`。2026-10-17 起 `main` 已包含此前三个本地分支的提交（migrate 修复、路径层收缩、打包闭包、配置治理），工作树收口完成。**共享 Desktop profile 已从本地候选换到正式 `v0.2.0` 标签**，锁文件解析到发布提交、包内关键文件与标签树逐 blob 一致；换装后会话再次加载标准技能并调用 `std_config inspect`，用户报告三组件均「运行中」。用户经 profile patch 仅对 `.staging/guard-acceptance.txt` 启用测试保护；真实 `edit` 在当前 `never` 审批策略下被自动拒绝，目标未改变，切换 `ask` 后用户在 UI 选择仅本次允许，真实 `edit` 成功且文件回读正确；用户随后移除临时 profile 覆盖并重启，配置文件回读已恢复包默认关闭。发布版本选择 `0.2.0`（新增配置治理且旧路径配置不兼容），本次从插件仓 `main` 发布的限版本例外由用户批准并记在 [D-108](docs/决策日志.md#effective-register)；D-137 整体取代仍是提议。`main` 已快进推送，带注释 `v0.2.0` 已推送并由远端解引用核对；发布回执与实际标签身份见[本轮记录](docs/审计记录/2026-10-17-共享profile验收与v0.2.0发布.md)；配置入口与限制见 [tools/std/README](tools/std/README.md#dsh-接法)。**研究架构保持现有组织；候选标准与采用检查见[本轮完善记录](docs/审计记录/本轮完善记录.md)。实际项目效果仍待验证。**
 状态：进行中  
 状态负责人：用户与 AI 共同维护
@@ -29,7 +29,7 @@ last_status_change：2026-10-18（D-108 过渡合同生效，PR #1 的跳钩子�
 
 - repository：`D:\Programs\AI辅助开发规范及工作流确定`（Windows；2026-10-04 起以此为主工作环境，Ubuntu 后续再支持，旧服务器副本与此处有无未同步差异未核，记未定）
 - worktree/branch：`main`。HEAD 取值不在此抄录——git 是其唯一权威，抄一份必然漂移（[08 §7](docs/08-规范效力元治理.md)）。**更正**：此前记载的"本会话对该文件夹无删除权限、git 无法运行"已不成立——2026-09-03 本会话直接完成了第九轮提交（需先清除一个残留的零字节 `.git/index.lock`）。
-- activity_work_item：[过渡集成闸门与配置方向](docs/审计记录/2026-10-18-过渡集成闸门与配置方向.md)（PR #1 已受保护合入且主干检查成功；真实试点未开展，插件增量未装机）
+- activity_work_item：[Reservoir 开发流程试点](docs/审计记录/2026-10-18-Reservoir开发流程只读试点.md)（只读回执已取得；收益仍未定，0.3.0 尚未发布或装机）
 - last_verified_at：2026-10-18
 
 ## 当前风险
