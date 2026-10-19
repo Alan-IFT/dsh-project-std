@@ -7,7 +7,7 @@
 
 ## 配置治理
 
-`std_config`（`dsh-project-std/config`）随当前候选包提供；共享 Desktop 已锁定到包含此入口的提交并在新会话调用过 `inspect`，但尚未从发布标签安装。配置入口默认启用，原生编辑保护 `protectNativeEdits:false`；完整接口与限制见 [CONTRACT §10](CONTRACT.md#10-配置治理候选接口)。这不是任意仓库写工具，只认当前 agent/session 的 cwd 及固定治理路径。
+`std_config`（`dsh-project-std/config`）随插件包提供；共享 Desktop 目前从已发布的 `v0.2.0` 标签安装并在新会话调用过 `inspect`。`main` 新增的 `layout.frozen` 方向证明尚未换装到共享 profile；以 profile 锁定版本和实际会话回读为准。配置入口默认启用，原生编辑保护 `protectNativeEdits:false`；完整接口与限制见 [CONTRACT §10](CONTRACT.md#10-配置治理候选接口)。这不是任意仓库写工具，只认当前 agent/session 的 cwd 及固定治理路径。
 
 在已挂载候选且 tools/fs 注入齐全的独立验证环境，模型从一开始使用专用入口（以下为工具参数，不是 Shell 命令）：
 
@@ -134,7 +134,7 @@ node lib/cli.js config-review D:\projects\example --candidate D:\proposals\excep
 **版本号只有一处权威：`package.json` 的 `version`，遵循 [semver](https://semver.org/lang/zh-CN/)。** 发布标签是 `v` 加这个号（如 `version` 是 `0.2.0`，标签就是 `v0.2.0`）；两处必须一致，不手工对应。
 
 - **打标签前先跑** `node scripts/check-release-tag.mjs v<版本>`。它只读、不打标签、不推送，逐项核对：标签 = `v` + `version` 且是合法 semver；本地与远端都没有同名标签；工作区干净；当前在 `main`；`HEAD` 已推送且等于 `origin/main`。**查不了远端不当作“标签不存在”**，会明确报未通过。
-- **升版本号**：先改 `package.json` 的 `version`，提交并推送，再打同名标签。破坏性变更升 MAJOR（`0.x` 阶段升 MINOR），向后兼容的新功能升 MINOR，修复升 PATCH；预发布用 semver 的预发布段（如 `v0.3.0-rc.1`）。本次从 `v0.1.0` 升到 `v0.2.0`：配置治理是新增能力，旧路径配置的格式也不兼容；不能以只加宿主兼容为由当作 `0.1.1`。本次从插件仓 `main` 发布是 [D-108 的限版本例外](../../docs/决策日志.md#effective-register)；后续版本不自动沿用。
+- **升版本号**：先改 `package.json` 的 `version`，提交并推送，再打同名标签。破坏性变更升 MAJOR（`0.x` 阶段升 MINOR），向后兼容的新功能升 MINOR，修复升 PATCH；预发布用 semver 的预发布段（如 `v0.3.0-rc.1`）。此前从 `v0.1.0` 升到 `v0.2.0`：配置治理是新增能力，旧路径配置的格式也不兼容；不能以只加宿主兼容为由当作 `0.1.1`。`v0.2.0` 当时从 `main` 发布属于 [D-108](../../docs/决策日志.md#effective-register) 的一次性历史例外；其后版本改走 2026-10-18 批准的受保护 `main` PR＋必需检查过渡合同，不得沿用原例外。本次 `0.3.0` 增加兼容的 `layout.frozen` 配置方向证明，按新功能升 MINOR；打标签前须再次核对目标主干提交的检查回执。
 - **旧日期式标签**（`2026-10-05.1`、`2026-10-10-pre.4` 之类）是迁移期的遗留：保留不动，因为三个仍在用 `git subtree` 的旧项目、以及已装过预发布版本的 profile 锁文件都引用着它们。**新标签一律用 `v` 开头的 semver**；`node scripts/check-release-tag.mjs --list` 能列出现有标签各属哪一类。
 - **打标签与推送是对外可见、难以撤回的动作**（别人的锁文件会引用它），由具名的人执行，不由脚本代劳。
 
