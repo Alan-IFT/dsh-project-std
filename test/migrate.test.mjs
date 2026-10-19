@@ -45,6 +45,9 @@ hook_pick_python
 function adopter(flavor) {
   const root = mk()
   git(root, 'init', '-q')
+  // A Git background maintenance.lock is not a migration side effect; keep fixture snapshots deterministic.
+  assert.equal(git(root, 'config', 'maintenance.auto', 'false').status, 0)
+  assert.equal(git(root, 'config', 'gc.auto', '0').status, 0)
   w(root, 'AGENTS.md', '# 入口\n\n标准在 `.std/标准/`，检查：`python3 .std/tools/std/check_all.py .`\n')
   w(root, 'governance/project.yaml', 'tier: L0\ncompatibility:\n  policy: 未上线，可破坏性重构\nlayout:\n  entry:\n    - AGENTS.md\n  frozen:\n    - .std                # 标准的只读内嵌副本\n')
   w(root, 'governance/STANDARD_VERSION', '2026-10-05.1\nadopted_at: 2026-09-10\n')
