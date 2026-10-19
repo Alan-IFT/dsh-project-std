@@ -7,7 +7,7 @@
 
 ## 配置治理
 
-`std_config`（`dsh-project-std/config`）随插件包提供；共享 Desktop 已从 `v0.3.0` 标签安装到磁盘，锁解析及包内关键文件已与发布提交核对；**当前会话是否加载新版尚未验证**，须重启后在新会话回读 `std_config inspect` 与技能入口。此前 `v0.2.0` 的新会话曾调用过 `inspect`，不能据此替代本版验收。配置入口默认启用，原生编辑保护 `protectNativeEdits:false`；完整接口与限制见 [CONTRACT §10](CONTRACT.md#10-配置治理候选接口)。这不是任意仓库写工具，只认当前 agent/session 的 cwd 及固定治理路径。
+`std_config`（`dsh-project-std/config`）随插件包提供；共享 Desktop 已锁定 `v0.3.0`；重启后新会话实测加载标准技能并成功调用 `std_config inspect`，回执见[装机记录](../../docs/审计记录/2026-10-18-v0.3.0发布装机.md)。路径层默认关闭与 Plugins 页显示未在该记录中验证。配置入口默认启用，原生编辑保护 `protectNativeEdits:false`；完整接口与限制见 [CONTRACT §10](CONTRACT.md#10-配置治理候选接口)。这不是任意仓库写工具，只认当前 agent/session 的 cwd 及固定治理路径。
 
 在已挂载候选且 tools/fs 注入齐全的独立验证环境，模型从一开始使用专用入口（以下为工具参数，不是 Shell 命令）：
 
