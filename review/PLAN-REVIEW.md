@@ -1,8 +1,10 @@
 # 第五冻结 guard 收口方案独立审查
 
+> 本报告引用的 `.staging/` 本机提取件未随仓分发；下列路径只保留定位信息，不是可由干净克隆复核的链接。
+
 **2026-10-17 收口补记**：本报告写作时引用的 `test/hooks-path.test.mjs` 已在路径层收缩中退役，原 markdown 链接改为文本，报告内容未改；只在收口时补这一句。
 
-事实型／接手；对象为 [PLAN](<../.staging/guard-closeout-20261012/PLAN.md>)，仅写本报告。观察时间 `2026-10-12T01:25:47-07:00`（America/Los_Angeles，主机回读），父会话 `session-16036d35-3dcd-4196-a29a-856ca1c2a536`。本次没有执行 tsc、lib-sync、guard import/call、测试、变异、真实 hooksPath/Git config 查询、启动、安装、提交、源改或委派。
+事实型／接手；对象为 `PLAN`（本机未随仓证据：`../.staging/guard-closeout-20261012/PLAN.md`），仅写本报告。观察时间 `2026-10-12T01:25:47-07:00`（America/Los_Angeles，主机回读），父会话 `session-16036d35-3dcd-4196-a29a-856ca1c2a536`。本次没有执行 tsc、lib-sync、guard import/call、测试、变异、真实 hooksPath/Git config 查询、启动、安装、提交、源改或委派。
 
 ## 1. 结论与准入范围
 
@@ -14,12 +16,12 @@
 
 | ID | 三态 | 审查结论及成立条件 |
 |---|---|---|
-| A | FAIL | [原方案:9](<../.staging/guard-closeout-20261012/PLAN.md>)只写“明确 TMP”且称脚本清自身，不足以精确限定 Windows tmpdir 和失败清理；也未给固定入口。采用 §3 后，仅可条件准入静态编译／原比较脚本，实际执行结果仍未定。 |
+| A | FAIL | `原方案:9`（本机未随仓证据：`../.staging/guard-closeout-20261012/PLAN.md`）只写“明确 TMP”且称脚本清自身，不足以精确限定 Windows tmpdir 和失败清理；也未给固定入口。采用 §3 后，仅可条件准入静态编译／原比较脚本，实际执行结果仍未定。 |
 | B | PASS | 回归:4–5（`test/hooks-path.test.mjs`，已在路径层收缩中退役）明确 import policy/apply；各测试体调用 decide/lex/apply。只读源码和 [变异清单](<../test/mutations/guard.json>)可进行；node --test、导入测试模块、变异 runner、自拟 matrix 均不可执行。 |
-| C | PASS | [原方案:7–11](<../.staging/guard-closeout-20261012/PLAN.md>)明确编译不算行为验收。类型结果、生成文本一致、静态 QA 各只证明自身判据；行为、专项 QA、变异有效性、真实 profile 均保留 UNDETERMINED。 |
+| C | PASS | `原方案:7–11`（本机未随仓证据：`../.staging/guard-closeout-20261012/PLAN.md`）明确编译不算行为验收。类型结果、生成文本一致、静态 QA 各只证明自身判据；行为、专项 QA、变异有效性、真实 profile 均保留 UNDETERMINED。 |
 | D | PASS | 不新增源码／权限例外、只处理第五冻结、不混 tag listing 或宿主 grant 的边界明确；当前四份冻结身份已独立核对相同，见 §2。发现实质缺陷仅报告，不能就地修或重构。 |
 | E | PASS | 无最终行为验收不提交／安装／部署未验 guard；允许另经现有任务范围 prepare 本地 guard-only patch/manifest，不 apply、不执行它。独立静态 QA 可完成，不能据此宣布五阶段已替代行为验证。 |
-| F | UNDETERMINED | [正式资料](<../DSH-FINDINGS.md>)与 [宿主交接](<../.staging/approval-research-20261012/DSH-HANDOFF.md>)已有静态源码锚点，可交 owner；但历史被拒调用的完整原命令／callId／事件关联不存在于本次输入，无法确认该次来源。保留未知即可准备交接，不能称历史归因已完成或批准渠道已恢复。 |
+| F | UNDETERMINED | [正式资料](<../DSH-FINDINGS.md>)与 `宿主交接`（本机未随仓证据：`../.staging/approval-research-20261012/DSH-HANDOFF.md`）已有静态源码锚点，可交 owner；但历史被拒调用的完整原命令／callId／事件关联不存在于本次输入，无法确认该次来源。保留未知即可准备交接，不能称历史归因已完成或批准渠道已恢复。 |
 
 ## 2. 自核身份与静态路径
 
@@ -39,7 +41,7 @@
 
 - [package:40–45](<../package.json>)：typecheck 为 tsc --noEmit；test **先写 root lib 再执行全部 test**，不准入；不走 pnpm/npm 包装或生命周期。
 - [tsconfig](<../tsconfig.json>)：无 extends、references、plugins、incremental/composite；include=src，rootDir=src，outDir=lib。noEmit 覆盖产出；原 lib-sync 用 --outDir 覆盖根 lib。静态 import 解析读取依赖，不调用本仓模块顶层业务。
-- [tsc 入口](<../node_modules/typescript/bin/tsc>)仅 import [启动器](<../node_modules/typescript/lib/tsc.js>)；Windows 启动器通过 execFileSync 且 stdio=inherit 启动 native tsc。 [定位器](<../node_modules/typescript/lib/getExePath.js>)只读 package/解析平台包/exists，不 import guard、不安装；本地为 TypeScript 7.0.2，解析到 [平台包](<../node_modules/.pnpm/@typescript+typescript-win32-x64@7.0.2/node_modules/@typescript/typescript-win32-x64/package.json>) 的 native tsc。
+- [tsc 入口](<../node_modules/typescript/bin/tsc>)仅 import [启动器](<../node_modules/typescript/lib/tsc.js>)；Windows 启动器通过 execFileSync 且 stdio=inherit 启动 native tsc。 [定位器](<../node_modules/typescript/lib/getExePath.js>)只读 package/解析平台包/exists，不 import guard、不安装；本地为 TypeScript 7.0.2，解析到 `Windows 平台包 node_modules/.pnpm/@typescript+typescript-win32-x64@7.0.2/node_modules/@typescript/typescript-win32-x64/package.json`（Linux 安装不含此包） 的 native tsc。
 - [lib-sync:5–39](<../scripts/check-lib-sync.mjs>)只 import Node 内建模块，spawn 同一 tsc，读取 tmp 与根 lib，CRLF→LF 后逐文件比较；没有 import guard 或调用 decide，没有运行生成 JS。它证明规范化文本一致，**不是严格原字节一致**。
 - [第五冻结源:729–764](<../src/guard/policy.ts>)静态首位证明后仅 child frame 一对一 word/NUL 投影、queryKey=null 召回 ask；[扫描位置:959–988](<../src/guard/policy.ts>)在 CD continue 前；[主查询:1023–1042](<../src/guard/policy.ts>)不清已有 ask。相关 [JS:969–1024](<../lib/guard/policy.js>)与声明公开结构人工对应。不是全文件同步证明，也不重复做宽审查。
 - 新增回归:456–510（`test/hooks-path.test.mjs`，已在路径层收缩中退役）覆盖 CD 静态受控/query/ANY、nested 受控及后续 query 不消警；[G37/G41/G43](<../test/mutations/guard.json>)对应前置扫描与静态子候选召回。仅核存在与语义指向，不宣称运行通过／变异可杀。
@@ -87,8 +89,8 @@ try {
 
 - 最小 guard-only patch 只含 §2 五份对象相对 HEAD 的真实 delta（包括未跟踪回归），manifest 记录基线／当前文件 hash、恢复前提和行为未验；不能夹带当前 migrate/main 文档产品变更，不能 apply／commit／安装。发布用 d.ts 仍需纳入 scope，因为相对 HEAD 脏，不因相对上次冻结同值省略。
 - 独立 QA 的入口只读 execution 原始命令与结果、冻结/前后 hash、owned tmp 清理状态与 scope；不执行 guard，不再编译，不碰迁移 worktree／共享 profile。测试、专项动态矩阵、变异、真实 DSH 运行仍是显式未定列表。完整行为验证计划移交可审批父会话，但不在当前通道运行。
-- [宿主 approval 源:152–176](<../.staging/approval-research-20261012/host-evidence/dsh-user-approval/lib/index.js>)确实在 answerer 前因 never 返回 rejected；[tools:1093–1128](<../.staging/approval-research-20261012/host-evidence/dsh-tools/lib/types/index.js>)将其与人工 No 共用通用文案；[Auto:480–484](<../.staging/approval-research-20261012/host-evidence/dsh-experimental-auto-review/lib/index.js>)保下游决定；[子策略](<../.staging/approval-research-20261012/host-evidence/dsh-subagent/lib/types/child-agent.js>)pin never。这些是静态自核的机制，不是对某次历史调用的事件确认。
-- owner 接手资料应沿现有 [报告](<../DSH-FINDINGS.md>)／[问题交接](<../.staging/approval-research-20261012/DSH-HANDOFF.md>)补一条该次历史调用字段表：完整 command、cwd、工具／session/callId、当次 preset/effective policy、asked.reason、decided.outcome/source、body 是否执行；缺失逐格写 unknown，不用本轮哈希／采样补造历史事件。提取来源、版本和源码路径已可回读，无需再做广泛研究。
+- `宿主 approval 源:152–176`（本机未随仓证据：`../.staging/approval-research-20261012/host-evidence/dsh-user-approval/lib/index.js`）确实在 answerer 前因 never 返回 rejected；`tools:1093–1128`（本机未随仓证据：`../.staging/approval-research-20261012/host-evidence/dsh-tools/lib/types/index.js`）将其与人工 No 共用通用文案；`Auto:480–484`（本机未随仓证据：`../.staging/approval-research-20261012/host-evidence/dsh-experimental-auto-review/lib/index.js`）保下游决定；`子策略`（本机未随仓证据：`../.staging/approval-research-20261012/host-evidence/dsh-subagent/lib/types/child-agent.js`）pin never。这些是静态自核的机制，不是对某次历史调用的事件确认。
+- owner 接手资料应沿现有 [报告](<../DSH-FINDINGS.md>)／`问题交接`（本机未随仓证据：`../.staging/approval-research-20261012/DSH-HANDOFF.md`）补一条该次历史调用字段表：完整 command、cwd、工具／session/callId、当次 preset/effective policy、asked.reason、decided.outcome/source、body 是否执行；缺失逐格写 unknown，不用本轮哈希／采样补造历史事件。提取来源、版本和源码路径已可回读，无需再做广泛研究。
 - 确需行为验收时由用户／Host owner 从现有 DeepSeek Harness Web GUI `http://127.0.0.1:19387` 的正常权限入口，按 [采用说明](<../tools/std/README.md>)选择审批可用的**父会话**并核对应答通道；界面/登录/实际 answerer 仍未实测，不能承诺切 Auto 就能批子调用。不创建新 grant 引擎、不替用户改 preset、不要求把所有 No 变 Ask。交接本身不等于人已批准某个 pending call。
 
 ## 5. 收工回执与盲区

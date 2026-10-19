@@ -1,6 +1,6 @@
 # Default Context Contract
 
-合同 contract_id `context-contract-research-001` · contract_revision `17` · updated_at `2026-10-17` · status `effective` · current_work_item `docs/审计记录/2026-10-17-共享profile验收与v0.2.0发布.md`
+合同 contract_id `context-contract-research-001` · contract_revision `18` · updated_at `2026-10-18` · status `effective` · current_work_item `docs/审计记录/2026-10-18-过渡集成闸门与配置方向.md`
 
 > 合同头写成标题下这一行正文，不用 YAML 头。原因记录：此前支持的宿主（Claude Code，2026-09-24 实测）会在 `@` 导入时整段剥掉 YAML 头，模型看不到修订号；该宿主已不再支持（[D-135](docs/决策日志.md#decision-index)），形式不变，因为检查器与全部引用都按这一行读。DeepSeek Harness 把入口文件原文注入、不剥 YAML 头，但这一点读自包文档、**未经实机验证，记未定**，不据此改回 YAML 头。status：D-015 于 2026-09-03 进入`已接受`，本文件是它的载体实例，载体形态本身效力为零。current_work_item：2026-10-17 聚焦切到「共享 profile 验收与 v0.2.0 发布」；此前的 DSH 0.2.1 兼容记录留作历史证据，工作项切换故 revision 由 16 递增为 17。
 

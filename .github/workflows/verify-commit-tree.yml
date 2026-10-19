@@ -1,0 +1,40 @@
+# This checks the checked-out commit tree, not the submitter's working directory or local hooks.
+# It becomes a blocking integration gate only when the target branch requires this check.
+name: Verify commit tree
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.11.1'
+      - name: Install locked dependencies
+        run: |
+          npm install --global pnpm@11.28.5
+          pnpm install --frozen-lockfile
+      - name: Verify committed sources and package
+        run: |
+          pnpm test
+          node lib/cli.js . --selftest
+          node lib/cli.js . --no-scope
+          node scripts/check-normative-force.mjs
+          node scripts/check-lib-sync.mjs
+          node scripts/check-py-semantics.mjs
+          node scripts/check-residue.mjs

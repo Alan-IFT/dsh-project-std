@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { reviewProject, reviewExceptions, sha256, decodeRaw, assertText } from '../lib/config-governance.js'
 import { parseExceptionsText } from '../lib/core/exceptions.js'
+import { inFrozen } from '../lib/core/docs.js'
 
 const keys = ['entry_lines','stale_days','work_item_stale_days','status_lines','handoff_lines','work_item_lines','module_lines','duplicate_min_lines','duplicate_min_chars']
 const budget = (key, value) => `budgets:\n  ${key}: ${value}\n`
@@ -36,14 +37,54 @@ test('mapping order and comments equivalent, declared defaults deletion unknown'
   assert.deepEqual(reviewProject('# c\nb: 2\na: 1\n','a: 1\nb: 2\n','before').changes,[])
   assert.equal(reviewProject('tier: L1\n','tier: L1\nbudgets:\n  entry_lines: 150\n','before').changes[0].direction,'unknown')
 })
-test('non-budget fields always unknown and mixed changes never offset',()=>{
+test('mixed changes never offset a relaxation',()=>{
   const a='budgets:\n  entry_lines: 10\n  stale_days: 10\nlayout:\n  frozen:\n    - a\n'
   const b='budgets:\n  entry_lines: 9\n  stale_days: 11\nlayout:\n  frozen:\n    - a/b\n'
   const r=reviewProject(b,a,'before')
-  assert.deepEqual(r.changes.map(c=>c.direction),['tighten','relax','unknown']); assert.equal(r.needsApproval,true)
+  assert.deepEqual(r.changes.map(c=>c.direction),['tighten','relax','tighten']); assert.equal(r.needsApproval,true)
   for(const key of ['metadata_fields','metadata_required','aliases','repos','derived','tailoring','compatibility','rootrolemap','unknown']) {
     const r=reviewProject(`${key}:\n`,`${key}:\n`,'b'); assert.equal(r.valid,true)
   }
+})
+const frozen = entries => entries.length ? `layout:\n  frozen:\n${entries.map(x => `    - ${x.includes('\\') ? x : `'${x}'`}\n`).join('')}` : 'layout:\n  frozen: []\n'
+for (const [before, after, direction, approval] of [
+  [['docs/archive'], ['docs'], 'relax', true],
+  [['docs'], ['docs/archive'], 'tighten', false],
+  [['docs/a'], ['docs/a', 'docs/b'], 'relax', true],
+  [['docs/a', 'docs/b'], ['docs/a'], 'tighten', false],
+  [['docs/a'], ['docs/b'], 'unknown', true],
+  [['docs', 'docs/a'], ['docs/a', 'docs'], 'equivalent', false],
+  [['docs\\archive/'], ['./docs/archive'], 'unknown', true],
+  [['docs\\archive/'], ['docs/archive'], 'equivalent', false],
+  [['docs'], [], 'tighten', false],
+  [[], ['docs'], 'relax', true],
+]) test(`frozen prefix union ${JSON.stringify(before)} → ${JSON.stringify(after)}`, () => {
+  const r = reviewProject(frozen(after), frozen(before), 'before')
+  assert.equal(r.valid, true, r.problem)
+  assert.deepEqual(r.changes.map(c => [c.path, c.direction]), [['/layout/frozen', direction]])
+  assert.equal(r.needsApproval, approval)
+})
+test('frozen proof agrees with the actual checker on exhaustive small prefix unions', () => {
+  const names = ['', 'a', 'a/b', 'ab', 'b', 'a\\b', 'a/']
+  const files = ['a', 'a/b', 'a/b/c', 'a/x', 'ab', 'b', 'a//b', 'a/bc', 'a\\b']
+  const lists = Array.from({length: 1 << names.length}, (_, bits) => names.filter((_, i) => bits & (1 << i)))
+  const masks = lists.map(list => files.map(file => inFrozen({layout:{frozen:list}}, file)))
+  for (let i = 0; i < lists.length; i++) for (let j = 0; j < lists.length; j++) {
+    const a = masks[i], b = masks[j]
+    const r = reviewProject(frozen(lists[j]), frozen(lists[i]), 'before')
+    assert.equal(r.valid, true, r.problem)
+    const direction = r.changes[0]?.direction ?? 'equivalent'
+    if (direction === 'equivalent') assert.deepEqual(b, a)
+    if (direction === 'tighten') assert.ok(b.every((hit, k) => !hit || a[k]))
+    if (direction === 'relax') assert.ok(a.every((hit, k) => !hit || b[k]))
+  }
+})
+test('frozen missing declaration is unknown and a literal dotted key is not a prefix list', () => {
+  const missing = reviewProject(frozen(['docs']), 'layout:\n', 'before')
+  assert.equal(missing.changes[0].direction, 'unknown')
+  assert.equal(missing.needsApproval, true)
+  const dotted = reviewProject('layout.frozen: docs\n', 'layout.frozen: old\n', 'before')
+  assert.equal(dotted.changes[0].direction, 'unknown')
 })
 test('first missing is explicit unknown; invalid old baseline never becomes empty',()=>{
   const first=reviewProject('tier: L1\n',null,null)
